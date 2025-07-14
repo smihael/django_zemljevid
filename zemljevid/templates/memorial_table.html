@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load render_table from django_tables2 %}
+{% load widget_tweaks %}
+{% load leaflet_tags %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    table {
+      font-size: 0.75rem;
+    }
+    tr {
+      height: 100px;
+    }
+    .cell-ellipsis {
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      position: relative;
+    }
+    .cell-ellipsis::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1rem;
+      width: 100%;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+      display: none;
+    }
+    .cell-ellipsis.overflowed::after {
+      display: block;
+    }
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* space between elements */
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  min-width: 150px; /* adjust label width as needed */
+  margin-bottom: 0;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1; /* allows inputs and dropdowns to scale */
+}
+
+#memorial_map {
+  min-height: 350px;
+  height: 350px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px #ccc;
+  background: #f8f9fa;
+}
+
+  </style>
+{% endblock %}
+
+{% block content %}
+<div id="page-content-wrapper-wide">
+<div class="container-fluid mt-4">
+  <h2 class="mb-4">Memorial Table</h2>
+
+  {% if filter %}
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <form method="get" class="mb-3 p-3 border rounded bg-light">
+        {% for field in filter.form.visible_fields %}
+        <div class="form-row filter-field{% if forloop.counter > 4 %} d-none extra-filter{% endif %}">
+          <label class="form-label small"><i>{{ field.label }}</i></label>
+          {% if "date" in field.name or "time" in field.name %}
+            {{ field|add_class:"form-control form-control-sm dateinput" }}
+          {% else %}
+            {{ field|add_class:"form-control form-control-sm" }}
+          {% endif %}
+        </div>
+        {% endfor %}
+        
+        <div class="d-flex justify-content-between mt-3 align-items-center">
+          <div>
+            <button type="button" class="btn btn-link btn-sm px-0 me-3" id="toggle-filters">
+              <span id="toggle-filters-text">Show more filters</span>
+              <i class="bi bi-chevron-down" id="toggle-filters-icon"></i>
+            </button>
+          </div>
+          <div>
+            <a href="?" class="btn btn-link btn-sm text-decoration-none text-danger fw-bold">
+              <i class="bi bi-x-circle"></i> Clear filters
+            </a>
+            <button type="submit" class="btn btn-primary btn-sm me-2">
+              <i class="bi bi-funnel"></i> Filter
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-md-4 d-flex align-items-center justify-content-center">
+      <div id="memorial_map"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% render_table table 'bootstrap-table.html' %}
+</div>
+
+<!-- Modal for full cell content -->
+<div class="modal fade" id="cellModal" tabindex="-1" role="dialog" aria-labelledby="cellModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cellModalLabel">Celotno besedilo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zapri</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  var map = L.map('memorial_map').setView([46.05, 14.51], 8);
+map.attributionControl.setPrefix('<a href="https://github.com/smihael/django_zemljevid">Django Zemljevid</a> | &copy; Prostovoljci projekta <a href="/o-projektu">Partizanstvo na zemljevidu</a> (Slike: CC-BY-SA 4.0 z izjemami, podatki: CC 4.0)');
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  function updateMapMarkers() {
+    if (window._memorialMarkers) {
+      window._memorialMarkers.forEach(m => map.removeLayer(m));
+    }
+    window._memorialMarkers = [];
+    var markerCoords = [];
+    var rows = document.querySelectorAll('#page-content-wrapper-wide table tbody tr');
+    rows.forEach(function(row) {
+      var lat = parseFloat(row.getAttribute('data-lat'));
+      var lng = parseFloat(row.getAttribute('data-lng'));
+      var label = row.querySelector('td').textContent;
+      if (!isNaN(lat) && !isNaN(lng)) {
+        var marker = L.marker([lat, lng]).bindPopup(label).addTo(map);
+        window._memorialMarkers.push(marker);
+        markerCoords.push([lat, lng]);
+      }
+    });
+    if (markerCoords.length > 0) {
+      var bounds = L.latLngBounds(markerCoords);
+      map.fitBounds(bounds, {padding: [30, 30]});
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateMapMarkers();
+    var form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function() {
+        setTimeout(updateMapMarkers, 700);
+      });
+    }
+  });
+
+  $(document).ready(function () {
+    $('.cell-ellipsis').each(function () {
+      if (this.scrollHeight > this.clientHeight + 1) {
+        $(this).addClass('overflowed');
+      }
+    });
+
+    $(document).on('click', '.cell-ellipsis.overflowed', function () {
+      const content = $(this).html();
+      $('#cellModal .modal-body').html(content);
+      $('#cellModal').modal('show');
+    });
+
+    $('form input[type="date"], form input.dateinput').flatpickr({
+      enableTime: false,
+      dateFormat: 'Y-m-d'
+    });
+
+    $('form input[type="datetime"], form input[type="datetime-local"], form input.datetimeinput').flatpickr({
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i'
+    });
+
+    // Fix: Toggle extra filters (works after page load)
+    $('#toggle-filters').on('click', function(e) {
+      e.preventDefault();
+      var extra = $('.extra-filter');
+      var text = $('#toggle-filters-text');
+      var icon = $('#toggle-filters-icon');
+      var shown = extra.first().is(':visible');
+      extra.toggleClass('d-none');
+      if (shown) {
+        text.text('Show more filters');
+        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+      } else {
+        text.text('Show fewer filters');
+        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+      }
+    });
+  });
+</script>
+{% endblock %}

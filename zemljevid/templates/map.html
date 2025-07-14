@@ -1,0 +1,231 @@
+{% load static %}
+{% load i18n %}
+{% load translated_content_tags %}
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Partizanstvo na zemljevidu</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" />
+  <link rel="stylesheet" href="{% static 'vendor/leaflet-sidepanel.css' %}" />
+  <link rel="stylesheet" href="{% static 'vendor/leaflet.contexmenu.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'vendor/leaflet-search.min.css' %}" />
+
+  <!-- GLightbox CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+  <link rel="stylesheet" type="text/css" href="{% static 'css/gallery.css' %}">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" type="text/css" href="{% static 'css/map.css' %}">
+
+  <!-- favicon -->
+  <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" >
+
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="#">
+            <img src="{% static 'images/rdeca-zvezdica.svg' %}" alt="Logo" width="30" height="30" class="d-inline-block align-top">
+            Partizanstvo na zemljevidu
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div id="filter-container" class="ml-3">
+                <!-- Prikaži:&nbsp; -->
+                <!-- Filters for marker layers will be dynamically added here -->
+            </div>
+            <ul class="navbar-nav ml-auto">
+                <!-- <li class="nav-item">
+                    <a class="nav-link" href="/o-projektu">O projektu</a>
+                </li> 
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin">Urejevalnik</a>
+                </li> -->
+                <li class="nav-item d-flex align-items-center">
+                    <form action="{% url 'set_language' %}" method="post" class="m-0 p-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <select name="language" onchange="this.form.submit()" class="form-select form-select-sm">
+                            {% get_current_language as LANGUAGE_CODE %}
+                            {% get_available_languages as LANGUAGES %}
+                            {% for lang_code, lang_name in LANGUAGES %}
+                                <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %}>
+                                    {{ lang_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+    <!-- Floating Search Bar -->
+    <div id="floating-search-bar" class="p-3">
+        <input class="form-control" type="search" placeholder="Išči po zbirki..." aria-label="Search">
+    </div>
+
+    <!-- Loading Circle -->
+    <div id="loading-circle" class="spinner-border text-primary" role="status" style="display: none; position: fixed; top: 50%; left: 50%; z-index: 1001; transform-origin: center;">
+        <span class="sr-only">Nalaganje ...</span>
+    </div>
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <div id="map">
+        <div id="mySidepanelLeft" class="sidepanel sidepanel-left tabs-left opened" aria-label="side panel" aria-hidden="false" bis_skin_checked="1">
+			<div class="sidepanel-inner-wrapper" bis_skin_checked="1">
+				<nav class="sidepanel-tabs-wrapper" aria-label="sidepanel tab navigation">
+					<ul class="sidepanel-tabs">
+						<li class="sidepanel-tab">
+							<a href="#" class="sidebar-tab-link active" role="tab" data-tab-link="tab-1">
+								<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-bookmarks" viewBox="0 0 16 16">
+									<path d="M2 4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v11.5a.5.5 0 0 1-.777.416L7 13.101l-4.223 2.815A.5.5 0 0 1 2 15.5V4zm2-1a1 1 0 0 0-1 1v10.566l3.723-2.482a.5.5 0 0 1 .554 0L11 14.566V4a1 1 0 0 0-1-1H4z"></path>
+									<path d="M4.268 1H12a1 1 0 0 1 1 1v11.768l.223.148A.5.5 0 0 0 14 13.5V2a2 2 0 0 0-2-2H6a2 2 0 0 0-1.732 1z"></path>
+								</svg>
+							</a>
+						</li>
+						<li class="sidepanel-tab">
+							<a href="#" class="sidebar-tab-link" role="tab" data-tab-link="tab-2">
+                                <!-- svg search icon -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M11.742 10.344a6 6 0 1 0-1.397 1.397l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85zM12 6a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"></path>
+                                </svg>
+							</a>
+						</li>
+						<li class="sidepanel-tab">
+							<a href="#" class="sidebar-tab-link" role="tab" data-tab-link="tab-3">
+								<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-geo" viewBox="0 0 16 16">
+									<path fill-rule="evenodd" d="M8 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 4a4 4 0 1 1 4.5 3.969V13.5a.5.5 0 0 1-1 0V7.97A4 4 0 0 1 4 3.999zm2.493 8.574a.5.5 0 0 1-.411.575c-.712.118-1.28.295-1.655.493a1.319 1.319 0 0 0-.37.265.301.301 0 0 0-.057.09V14l.002.008a.147.147 0 0 0 .016.033.617.617 0 0 0 .145.15c.165.13.435.27.813.395.751.25 1.82.414 3.024.414s2.273-.163 3.024-.414c.378-.126.648-.265.813-.395a.619.619 0 0 0 .146-.15.148.148 0 0 0 .015-.033L12 14v-.004a.301.301 0 0 0-.057-.09 1.318 1.318 0 0 0-.37-.264c-.376-.198-.943-.375-1.655-.493a.5.5 0 1 1 .164-.986c.77.127 1.452.328 1.957.594C12.5 13 13 13.4 13 14c0 .426-.26.752-.544.977-.29.228-.68.413-1.116.558-.878.293-2.059.465-3.34.465-1.281 0-2.462-.172-3.34-.465-.436-.145-.826-.33-1.116-.558C3.26 14.752 3 14.426 3 14c0-.599.5-1 .961-1.243.505-.266 1.187-.467 1.957-.594a.5.5 0 0 1 .575.411z"></path>
+								</svg>
+							</a>
+						</li>
+					</ul>
+				</nav>
+				<div class="sidepanel-content-wrapper" bis_skin_checked="1">
+					<div class="sidepanel-content" bis_skin_checked="1">
+					
+						<div class="sidepanel-tab-content active" data-tab-content="tab-1" bis_skin_checked="1">
+                            {% get_translated_content "home-page" as tab1 %}
+                            {{tab1|safe }}
+                            <br />
+                            <ul>
+                                <li><strong><a href="https://partizanstvo.si/sl/prispevajte_spomenik">Sporočite nam podatke o manjkajočem spomeniku</a></strong></li>
+                                <li><a href="https://sl.wikiversity.org/wiki/Partizanski_spomeniki_na_zemljevidu/Navodila_za_zahtevno_iskanje_in_izpise" target="_blank" rel="noopener">Navodila za zahtevno iskanje in izpise</a></li>
+                                <li><a href="https://sl.wikiversity.org/wiki/Partizanski_spomeniki_na_zemljevidu/Navodila_sodelavcem_za_urejanje" target="_blank" rel="noopener">Navodila sodelavcem za urejanje</a></li>
+                                <li><a href="https://partizanstvo.si/admin/" target="_blank" rel="noopener">Urejevalnik</a></li>
+                                <li><a href="https://www.geopedia.world/?locale=sl#T281_L2518_x1709131.9524565407_y5766409.413833694_s9_b362" target="_blank" rel="noopener">Arhivska verzija na Geopediji</a></li>
+                            </ul>
+                        </div>
+						<div class="sidepanel-tab-content" data-tab-content="tab-2" bis_skin_checked="1">
+							<h4>Iskalnik</h4>
+                            <p>
+                                Iskalnik omogoča iskanje po imenih partizanskih spomenikov, bolnišnic, poimenovanj in točk brez obeležja.
+                                Vnesite iskalni niz v spodnje polje in izberite točko, ki jo želite najti na zemljevidu.
+                            </p>
+
+                            <div id="searchbox"></div>
+
+                            <!-- <div class="search-results">
+                                <h5>Rezultati iskanja:</h5>
+                                <ul id="search-results-list"></ul>
+                            </div> -->
+                            <br />
+                            <br />
+                            <br />
+                            <br />
+
+                            <p>Za napredno iskanje je na voljo tudi napredno iskanje. Prek sledečih povezav najdete tabelaričen pregled posameznih slojev z možnostjo filtriranja:</p>
+                            <ul>
+                                <li><a href="{% url 'partisan_memorial_table' %}">Partizanski spomeniki</a></li>
+                                <li><a href="{% url 'partisan_hospital_table' %}">Partizanske bolnišnice</a></li>
+                                <li><a href="{% url 'partisan_naming_table' %}">Partizanska poimenovanja</a></li>
+                                <li><a href="{% url 'partisan_points_table' %}">Partizanske točke brez obeležja</a></li>
+                                <li><a href="{% url 'other_memorials_table' %}">Ostala obeležja</a></li>
+                            </ul>
+
+                    
+                            <!-- <div id="search-bar" class="p-3">
+                                <input class="form-control" type="search" placeholder="Išči po izbranih slojih..." aria-label="Search">
+                            </div> -->
+						</div>
+						<div class="sidepanel-tab-content" data-tab-content="tab-3" bis_skin_checked="1">
+                            <!--Info-->
+                            <h4 id="sidebar-title">Podrobnosti o točki</h4>
+                            <div id="gallery" class="gallery"></div>
+                            <div id="sidebar-buttons">
+                                <button id="lociraj-button" class="btn btn-light btn-sm" aria-label="Lociraj">
+                                    <span class="oi oi-map-marker" alt="Lociraj"></span> Lociraj točko
+                                </button>
+                                <button id="priblizaj-button" class="btn btn-light btn-sm" aria-label="Približaj in centiraj">
+                                    <span class="oi oi-target" alt="Približaj in centiraj"></span> Približaj točko
+                                </button>
+                                <button id="details-button" class="btn btn-light btn-sm" aria-label="Odpri podrobnosti">
+                                    <span class="oi oi-external-link" alt="Odpri podrobnosti"></span> Uredi podrobnosti
+                                </button>
+                            </div>
+
+                            {% get_translated_content "point-details" as pointdetails %}
+                            <div id="point-details" class="point-details">
+                                {{ pointdetails|safe }}
+                            </div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="sidepanel-toggle-container" bis_skin_checked="1">
+				<button class="sidepanel-toggle-button" type="button" aria-label="toggle side panel"></button>
+			</div>
+		</div>
+            
+        </div>
+    </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet extensions -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="{% static 'vendor/leaflet-sidepanel.min.js' %}"></script>
+  <script src="{% static 'vendor/leaflet.contextmenu.min.js' %}"></script>
+    <script src="{% static 'vendor/leaflet-search.min.js' %}"></script>
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <!-- leaflet maptiler sdk -->
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/v2.3.0/maptiler-sdk.umd.js"></script>
+  <link href="https://cdn.maptiler.com/maptiler-sdk-js/v2.3.0/maptiler-sdk.css" rel="stylesheet" />
+  <script src="https://cdn.maptiler.com/leaflet-maptilersdk/v2.0.0/leaflet-maptilersdk.js"></script>
+
+
+  <!-- GLightbox JS -->
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+
+  <script>
+      var defaultLat = {{ default_lat }};
+      var defaultLng = {{ default_lng }};
+      var api_key = "{{ api_key }}";
+  </script>
+
+  <script defer src="{% static 'js/gallery.js' %}"></script>
+  <script defer src="{% static 'js/map.js' %}"></script>
+
+</body>
+</html>

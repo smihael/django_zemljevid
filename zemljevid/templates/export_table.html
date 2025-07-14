@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Export Table to CSV</title>
+    <script>
+        function startExport() {
+            document.getElementById('export-status').style.display = 'block';
+            window.location.href = document.getElementById('export-link').href;
+            setTimeout(function() {
+                document.getElementById('export-status').style.display = 'none';
+            }, 5000); // Hide after 5 seconds (download should start)
+        }
+    </script>
+    <style>
+        #export-status {
+            display: none;
+            font-weight: bold;
+            color: #007bff;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Export Table to CSV</h2>
+    <a id="export-link" href="{{ export_url }}" onclick="startExport(); return false;">Export to CSV</a>
+    <div id="export-status">Exporting... please wait</div>
+</body>
+</html>

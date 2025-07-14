@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load translated_content_tags %}
+
+{% block extra_css %}
+{% endblock %}
+
+
+<div class="container">
+{% block content %}
+
+  <div class="description">
+    Zbirka partizanskih obeležij vsebuje spomenike, plošče, nagrobnike, infotable, muzejske prostore ipd. na temo partizanstva, internacije, talcev in revolucije. Zapisi skupaj s slikami so objavljeni pod licenco Creative Commons, kar pomeni, da so prosto uporabni; pri uporabi je treba navesti le ime fotografa, ki je praviloma avtor zapisa. Pri redkih fotografijah iz drugih virov je napisano, od kod so, in jih ni dovoljeno reproducirati.
+  </div>
+
+  <div class="button-container">
+    <a href="https://www.geopedia.world/?locale=sl#T281_L2518_x1709131.9524565407_y5766409.413833694_s9_b362" class="button-link archived" target="_blank">
+      <div class="button-text">Arhivska verzija na Geopediji</div>
+    </a>
+    <a href="{% url 'map' %}?zoom=9&lat=46.1511&lng=14.9955" class="button-link in-progress" target="_blank">
+      <div class="button-text">Novo spletišče (v nastajanju)</div>
+    </a>
+  </div>
+  
+{% endblock %}
+</div>
+
+{% block extra_js %}
+{% endblock %}

@@ -1,0 +1,9 @@
+*.pyc
+.ipynmb_checkpoints/
+__pycache__/
+profiles/
+
+static
+media
+zemljevid/migrations
+

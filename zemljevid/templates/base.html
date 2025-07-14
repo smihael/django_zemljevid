@@ -1,0 +1,59 @@
+{% load static %}
+{% load i18n %}
+{% load translated_content_tags %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% block title %}Partizanstvo na zemljevidu{% endblock %}</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS (updated to match map.html) -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+  <!-- Favicon: support both svg and ico -->
+  <link rel="shortcut icon" type="image/svg+xml" href="{% static 'images/zvezdica.svg' %}" />
+  <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        {% block navbar_brand %}
+        <a class="navbar-brand" href="{% block nav_link %}#{% endblock %}">
+            <img src="{% static 'images/rdeca-zvezdica.svg' %}" alt="Logo" width="30" height="30" class="d-inline-block align-top">
+            {% block nav_title %}Partizanstvo na zemljevidu{% endblock %}
+        </a>
+        {% endblock %}
+        {% block navbar_toggler %}{% endblock %}
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% block filter_container %}{% endblock %}
+            {% block navbar_content %}
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">O projektu</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'map' %}">Zemljevid</a></li>
+                <li class="nav-item"><a class="nav-link" href="/admin">Urejevalnik</a></li>
+            </ul>
+            {% endblock %}
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="bg-light border-right collapsed">
+        {% block sidebar %}{% endblock %}
+    </div>
+
+    {% block DOM_elements %}{% endblock %}
+
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+
+
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

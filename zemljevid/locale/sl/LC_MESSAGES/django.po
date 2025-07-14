@@ -1,0 +1,472 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-13 09:46+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n"
+"%100==4 ? 2 : 3);\n"
+
+#: models.py:18
+msgid "Not specified"
+msgstr "Ni določeno"
+
+#: models.py:19
+msgid "Existing memorials"
+msgstr "Obstoječi spomeniki"
+
+#: models.py:20
+msgid "Not visited memorials"
+msgstr "Neobiskani spomeniki"
+
+#: models.py:21
+msgid "Destroyed memorials"
+msgstr "Uničeni spomeniki"
+
+#: models.py:22
+msgid "Damaged memorials"
+msgstr "Poškodovani spomeniki"
+
+#: models.py:23
+msgid "Moved memorials"
+msgstr "Premaknjeni spomeniki"
+
+#: models.py:24
+msgid "Deposited memorials"
+msgstr "Deponirani spomeniki"
+
+#: models.py:28
+msgid "Monument"
+msgstr "Spomenik"
+
+#: models.py:29
+msgid "Statue"
+msgstr "Kip"
+
+#: models.py:30
+msgid "Memorial plaque"
+msgstr "Spominska plošča"
+
+#: models.py:31
+msgid "Obelisk"
+msgstr "Obelisk"
+
+#: models.py:32
+msgid "Memorial stone"
+msgstr "Spominski kamen"
+
+#: models.py:33
+msgid "Stolperstein"
+msgstr "Spotikavec"
+
+#: models.py:34
+msgid "Bust"
+msgstr "Doprsni kip"
+
+#: models.py:35
+msgid "Tombstone"
+msgstr "Nagrobnik"
+
+#: models.py:36
+msgid "Grave"
+msgstr "Grob(išče)"
+
+#: models.py:37
+msgid "Sculpture"
+msgstr "Skulptura"
+
+#: models.py:38
+msgid "Museum"
+msgstr "Muzej"
+
+#: models.py:39
+msgid "Airplane"
+msgstr "Četačp"
+
+#: models.py:40
+msgid "Anchor"
+msgstr "Sidro"
+
+#: models.py:41
+msgid "Info table"
+msgstr "Infotabla"
+
+#: models.py:42
+msgid "Memorial room"
+msgstr "Spominska soba"
+
+#: models.py:43
+msgid "Direction sign"
+msgstr "Smerokaz"
+
+#: models.py:44
+msgid "Other"
+msgstr "Drugo"
+
+#: models.py:51
+msgid "Category Name"
+msgstr "Ime kategorije"
+
+#: models.py:53 models.py:75
+msgid "Description"
+msgstr "Opis"
+
+#: models.py:54
+msgid "Enter a description for the category."
+msgstr "Vnesite opis kategorije (kaj sodi v kategorijo)."
+
+#: models.py:62 models.py:176
+msgid "Partisan Memorial Category"
+msgstr "Kategorija partizanskih spomenikov"
+
+#: models.py:63
+msgid "Partisan Memorial Categories"
+msgstr "Kategorije partizanskih spomenikov"
+
+#: models.py:74
+msgid "Name"
+msgstr "Ime"
+
+#: models.py:86
+msgid "Location and access"
+msgstr "Lokacija in dostop"
+
+#: models.py:87
+msgid "Enter information about access to the memorial"
+msgstr "Vnesite informacije o dostopu do spomenika"
+
+#: models.py:88
+msgid "Text on the memorial"
+msgstr "Besedilo na spomeniku"
+
+#: models.py:89
+msgid "Author of the memorial"
+msgstr "Avtor spomenika"
+
+#: models.py:90
+msgid "Time of creation"
+msgstr "Čas postavitve"
+
+#: models.py:92
+msgid "Status"
+msgstr "Status"
+
+#: models.py:94
+msgid "Remarks"
+msgstr "Opombe"
+
+#: models.py:95
+msgid ""
+"Enter additional remarks. These will not be displayed on the map, but will "
+"be saved in the database and can be used to filter memorials within the "
+"editor."
+msgstr ""
+"Vnesite dodatne opombe. Te ne bodo prikazane na zemljevidu, vendar bodo "
+"shranjene v bazi podatkov in jih bo mogoče uporabiti za filtriranje "
+"spomenikov znotraj urejevalnika."
+
+#: models.py:96 models.py:253
+msgid "Entry author"
+msgstr "Avtor vnosa"
+
+#: models.py:97 models.py:254
+msgid "Enter the names of the authors/reporters."
+msgstr "Vnesite ime avtorjev/popisovalcev."
+
+#: models.py:98 models.py:255
+msgid "Entry date"
+msgstr "Datum prvega vnosa"
+
+#: models.py:101
+msgid "Changes, supplements, corrections"
+msgstr "Spremembe, dopolnila, popravki"
+
+#: models.py:102
+msgid ""
+"Here we enter what we have changed, added, or corrected in the existing "
+"record, and current events related to the memorial. We sign and date the "
+"record."
+msgstr ""
+"Sem vnesemo, kar smo v obstoječem zapisu spremenili, dodali ali popravili, "
+"in aktualne dogodke v zvezi s spomenikom. Podpišemo se in zapis datiramo."
+
+#: models.py:105 models.py:257
+msgid "Hidden (will not be displayed on the map)"
+msgstr "Skrito (ne bo prikazano na zemljevidu)"
+
+#: models.py:106
+msgid ""
+"If checked, the memorial will not be displayed on the map, but will still be "
+"saved in the database and can be edited"
+msgstr ""
+"Če je označeno, spomenik ne bo prikazan na zemljevidu, vendar bo še vedno "
+"shranjen v bazi podatkov in ga bo mogoče urejati"
+
+#: models.py:109
+msgid "Memorial"
+msgstr "Spomenik"
+
+#: models.py:110
+msgid "Memorials"
+msgstr "Spomeniki"
+
+#: models.py:122 models.py:148
+msgid "Type of memorial"
+msgstr "Vrsta spomenika"
+
+#: models.py:123 models.py:149
+msgid "Select the type of memorial"
+msgstr "Izberite vrsto spomenika"
+
+#: models.py:133
+msgid "Literary memorial"
+msgstr "Literarni spomenik"
+
+#: models.py:134
+msgid "Literary memorials"
+msgstr "Literarni"
+
+#: models.py:154 models.py:231
+msgid "Municipality"
+msgstr "Občina"
+
+#: models.py:155
+msgid "Enter the name of the municipality where the memorial is located."
+msgstr "Vnesite ime občine, kjer se nahaja spomenik."
+
+#: models.py:159 models.py:232
+msgid "Cadastral data"
+msgstr "Katastrski podatki"
+
+#: models.py:160
+msgid "Enter cadastral data if available."
+msgstr "Vnesite katastrske podatke, če so na voljo."
+
+#: models.py:177
+msgid "Select the category of the memorial."
+msgstr "Izberite kategorijo spomenika"
+
+#: models.py:181
+msgid "Partisan memorial"
+msgstr "Partizanski spomenik"
+
+#: models.py:182
+msgid "Partisan memorials"
+msgstr "Spomeniki"
+
+#: models.py:194
+msgid "Croatian Partisan memorial"
+msgstr "Hrvaški partizanski spomenik"
+
+#: models.py:195
+msgid "Croatian Partisan memorials"
+msgstr "Hrvaški"
+
+#: models.py:203
+msgid "Period of operation"
+msgstr "Obdobje delovanja"
+
+#: models.py:205
+msgid "Partisan hospital"
+msgstr "Partizanska bolnišnica"
+
+#: models.py:206
+msgid "Hospitals"
+msgstr "Bolnice"
+
+#: models.py:216
+msgid "Type of naming"
+msgstr "Vrsta poimenovanja"
+
+#: models.py:217
+msgid "inscription on the plaque, official document, folk naming"
+msgstr "napis na tabli, uradni dokument, ljudsko poimenovanje"
+
+#: models.py:220
+msgid "Partisan naming"
+msgstr "Partizansko poimenovanje"
+
+#: models.py:221
+msgid "Namings"
+msgstr "Poimenovanja"
+
+#: models.py:237
+msgid "Point without memorial"
+msgstr "Točka brez obeležja"
+
+#: models.py:238
+msgid "Points without memorials"
+msgstr "Točke brez obeležja"
+
+#: models.py:247
+msgid "Name of the trail"
+msgstr "Ime poti"
+
+#: models.py:248
+msgid "Enter the name of the Partisan trail."
+msgstr "Vnesite ime partizanske poti."
+
+#: models.py:249
+msgid "Description of the trail"
+msgstr "Opis poti"
+
+#: models.py:250
+msgid "Enter the description of the Partisan trail."
+msgstr "Vnesite opis partizanske poti."
+
+#: models.py:251
+msgid "Geometry of the trail"
+msgstr "Geometrija poti"
+
+#: models.py:258
+msgid ""
+"If checked, the trail will not be displayed on the map, but will still be "
+"saved in the database and can be edited"
+msgstr ""
+"Če je označeno, obhodnica ne bo prikazana na zemljevidu, vendar bo še vedno "
+"shranjena v bazi podatkov in jo bo mogoče urejati"
+
+#: models.py:261
+msgid "Partisan trail"
+msgstr "Obhodnice"
+
+#: models.py:262
+msgid "Partisan trails"
+msgstr "Obhodnice"
+
+#: models.py:272
+msgid "Category"
+msgstr "Kategorija"
+
+#: models.py:273
+msgid ""
+"mobilized / partisan without insignia / home guard / Rapallo / "
+"independence / World War I"
+msgstr ""
+"mobilizirani / partizanski brez obeležja / domobranski / rapalski / "
+"osamosvojitveni / prva svetovna vojna"
+
+#: models.py:278
+msgid "Other memorial"
+msgstr "Obeležje"
+
+#: models.py:279
+msgid "Other memorials"
+msgstr "Ostalo"
+
+#: models.py:294
+msgid "External project"
+msgstr "Zunanja zbirka"
+
+#: models.py:295
+msgid "External projects"
+msgstr "Zunanje zbirke (seznam)"
+
+#: models.py:304
+msgid "External ID"
+msgstr "Zunanji ID"
+
+#: models.py:304
+msgid "External project ID."
+msgstr "ID v zunanji zbirki"
+
+#: models.py:307
+msgid "Connected External Entry"
+msgstr "Povezan objekt v zunanjih zbirkah"
+
+#: models.py:308
+msgid "Connected External Entries"
+msgstr "Povezani objekti v zunanjih zbirkah"
+
+#: models.py:322
+msgid "This connection already exists and must be unique."
+msgstr ""
+
+#: models.py:346
+msgid "The image file is too large. Size should be less than 5 MB."
+msgstr "Slika je prevelika. Priponka mora biti manjša od 5 MB."
+
+#: models.py:350
+msgid "Image"
+msgstr "Slika"
+
+#: models.py:351
+msgid "Upload an image related to the memorial."
+msgstr "Naložite sliko povezano s spomenikom."
+
+#: models.py:361
+msgid "Memorial Image"
+msgstr "Slika spomenikov"
+
+#: models.py:362
+msgid "Memorial Images"
+msgstr "Slike spomenikov"
+
+#: models.py:383
+msgid ""
+"The image can only be associated with a model that inherits from "
+"AbstractGeoEntry."
+msgstr ""
+
+#: models.py:422
+msgid "HTML element"
+msgstr ""
+
+#: models.py:427
+msgid "Language"
+msgstr "Jezik"
+
+#: models.py:428
+msgid "Select the language for the content."
+msgstr "Izberite jezik za vsebino."
+
+#: models.py:430
+msgid "Content"
+msgstr "Vsebina"
+
+#: models.py:434 models.py:435
+msgid "Translated Content"
+msgstr "Vsebina strani"
+
+#: templates/bootstrap-table.html:74
+msgid "previous"
+msgstr ""
+
+#: templates/bootstrap-table.html:94
+msgid "next"
+msgstr ""
+
+#: urls.py:16
+msgid "map/"
+msgstr "zemljevid/"
+
+#: urls.py:38
+msgid "about/"
+msgstr "o-projektu/"
+
+#~ msgid "Hospital"
+#~ msgstr "Bolnica"
+
+#~ msgid "Printing house"
+#~ msgstr "Tiskarna"
+
+#~ msgid "Memorial image"
+#~ msgstr "Slika spomenika"
+
+#~ msgid "Memorial images"
+#~ msgstr "Slike spomenikov"
+
+
+msgid "contribute_memorial/"
+msgstr "prispevajte_spomenik/"

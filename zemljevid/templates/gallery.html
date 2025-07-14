@@ -1,0 +1,33 @@
+<style>
+    .gallery {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Creates 2 columns */
+        gap: 10px;
+        width: 90%; /* 90% width of the parent */
+        margin: 0 auto; /* Centers the gallery in the parent container */
+        padding: 10px 0; /* Optional: Add some padding for spacing */
+    }
+    .gallery-item {
+        box-sizing: border-box;
+    }
+    .gallery img {
+        width: 100%; /* Make image fill its container (gallery-item) */
+        max-width: 300px;
+        height: auto; /* Keep aspect ratio */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
+<div id="gallery" class="gallery">
+    {% for image in images %}
+        <div class="gallery-item">
+            <img src="{{ image }}" alt="Gallery Image" width="100px">
+        </div>
+    {% empty %}
+        <p>No images available.</p>
+    {% endfor %}
+</div>
+
+
+

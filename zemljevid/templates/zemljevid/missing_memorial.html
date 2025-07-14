@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+  {{ form.media }}
+  <style>
+    .missing-memorial-container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      padding: 2.5rem 2rem 2rem 2rem;
+      margin-top: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .missing-memorial-title {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #2d3a4a;
+      margin-bottom: 1.2rem;
+    }
+    .missing-memorial-form .form-group {
+      margin-bottom: 1.2rem;
+    }
+    .missing-memorial-form label {
+      display: block;
+      font-weight: 500;
+      color: #2d3a4a;
+      margin-bottom: 0.3rem;
+    }
+    .missing-memorial-form textarea,
+    .missing-memorial-form input,
+    .missing-memorial-form select {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #cfd8dc;
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+      background: #f8fafc;
+      padding: 0.45rem 0.7rem;
+    }
+    .missing-memorial-form .form-control:focus {
+      border-color: #1976d2;
+      box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.15);
+    }
+    .missing-memorial-form button[type="submit"] {
+      background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      padding: 0.6rem 2.2rem;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      transition: background 0.2s;
+    }
+    .missing-memorial-form button[type="submit"]:hover {
+      background: linear-gradient(90deg, #1565c0 0%, #1976d2 100%);
+    }
+    .alert-info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+    }
+    .alert-success {
+      background: #e8f5e9;
+      color: #388e3c;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+    }
+    .form-check {
+      margin-bottom: 1.2rem;
+      margin-left: 0.1em;
+    }
+    .form-check input[type="checkbox"] {
+      width: 1.2em;
+      height: 1.2em;
+      margin-right: 0.6em;
+      accent-color: #1976d2;
+    }
+    .form-check-label {
+      font-weight: 500;
+      color: #2d3a4a;
+      font-size: 1rem;
+      margin-bottom: 0;
+      margin-left: 0;
+    }
+    .missing-memorial-form .btn[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    @media (max-width: 768px) {
+      .missing-memorial-container {
+        padding: 1.2rem 0.5rem;
+      }
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container missing-memorial-container">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <h2 class="text-center missing-memorial-title">Sporočite nam podatke o manjkajočem spomeniku</h2>
+      {% if success %}
+        <div class="alert alert-success mt-4">Vaši podatki so bili uspešno poslani. Hvala!</div>
+      {% else %}
+        <div class="alert alert-info mt-4 mb-4">
+          Prosimo, vnesite podatke o manjkajočem spomeniku. Vsa polja niso obvezna, a več podatkov pomaga.
+        </div>
+        <form method="post" class="missing-memorial-form mt-3 p-3 border rounded bg-light" id="missing-memorial-form">
+          {% csrf_token %}
+          {% for field in form %}
+            <div class="form-group">
+              {% if field.name == 'cc0_agree' %}
+                <div class="form-check d-flex align-items-center" style="gap: 0.5em;">
+                  {{ field }}
+                  <label class="form-check-label mb-0" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                </div>
+                {% if field.help_text %}
+                  <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}
+                  <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          {% endfor %}
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Pošlji podatke</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var cc0 = document.querySelector('input[name="cc0_agree"]');
+    var submitBtn = document.getElementById('submit-btn');
+    if (cc0 && submitBtn) {
+      function toggleBtn() {
+        submitBtn.disabled = !cc0.checked;
+      }
+      cc0.addEventListener('change', toggleBtn);
+      toggleBtn();
+    }
+  });
+</script>
+{% endblock %}
