@@ -1,0 +1,236 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#map {
+    /* Use dynamic height based on navbar */
+    height: calc(100vh - var(--navbar-height, 62px));
+    width: 100%;
+}
+
+#page-content-wrapper {
+    margin-top: var(--navbar-height, 62px);
+    margin-left: 0;
+    flex: 1;
+    transition: all 0.3s;
+}
+
+#page-content-wrapper.collapsed {
+    margin-left: 0;
+}
+
+#search-bar {
+    width: 100%;
+    padding: 8px;
+}
+
+#floating-search-bar {
+    position: fixed;
+    top: 70px; /* Adjust as needed */
+    left: 10px;
+    width: 250px;
+    z-index: 1001;
+    display: none;
+}
+
+#floating-search-bar.visible {
+    display: block;
+}
+
+.point-details .btn {
+    margin-bottom: 10px;
+}
+
+/* Add styles for the header */
+#header {
+    width: 100%;
+    padding: 10px;
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+#search-bar input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+
+#filter-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0 !important;
+    width: 100%;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    background-color: #f8f8f8;
+    border-radius: 20px;
+    padding: 5px 10px;
+    margin-right: 5px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    position: relative;
+}
+
+.filter-option.enabled {
+    background-color: #f0d0d0; /* Light green for enabled layers */
+}
+
+.filter-option .remove {
+    position: absolute;
+    right: 10px;
+    color: #ff0000;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+}
+
+.filter-option.enabled .remove {
+    display: inline; /* Show the "X" for enabled layers */
+}
+
+.filter-option:hover {
+    background-color: #d0d0d0;
+}
+
+.filter-option input {
+    display: none;
+}
+
+.filter-option label {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.filter-option .remove {
+    margin-left: 5px;
+    color: #ff0000;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.filter-option .remove:hover {
+    color: #cc0000;
+}
+
+
+.star-icon::before {
+  content: "★";
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: black;       
+  font-weight: bold;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  background: none;  
+  border: none;
+  /* TODO: bela obroba in črna senca */
+  /*-webkit-text-stroke: 0.5px rgb(255, 255, 255);*/
+  text-shadow:
+    -1px -1px 0 #fff,
+     1px -1px 0 #fff,
+    -1px  1px 0 #fff,
+     1px  1px 0 #fff;
+}
+
+.icon.green{
+    color: green;
+}
+.icon.blue{
+    color: blue;
+}
+.icon.red {
+    color: #E80C0C;
+}
+.icon.purple {
+    color: #cf1f8f;
+}
+
+.asterisk-icon::before{
+    content: "✱"; /* Unicode character for asterisk */
+}
+
+.cross-icon::before {
+    content: "✖"; /* Alternativa multiplication: ✕ */
+}
+
+.sidepanel-tabs-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    height: 100%;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+.navbar-brand img {
+    margin-right: 10px;
+}
+.navbar {
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#sidebar-buttons {
+    max-width: 100%;
+    width: max-content;
+    display: none; 
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+}
+
+#sidebar-buttons .btn {
+    width: 130px !important;
+    font-size: 12px;
+}
+
+.navbar select.form-control {
+    border: none;
+    background-color: transparent;
+    height: auto;
+}
+
+@media (max-width: 1000px) or (orientation: portrait) {
+    #filter-container {
+        display: none !important;
+    }
+}
+
+.point-details p {
+    word-break: break-word;
+}

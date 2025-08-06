@@ -17,8 +17,8 @@ from django.utils.translation import gettext_lazy as _, gettext_noop
 class MemorialStatus(models.IntegerChoices):
     NA = 0, _('Not specified')
     EXISTING = 1, _('Existing memorials')
-    NOT_VISITED = 2, _('Not visited memorials')
-    DESTROYED = 3, _('Destroyed memorials')
+    NOT_VISITED = 3, _('Not visited memorials')
+    DESTROYED = 2, _('Destroyed memorials')
     DAMAGED = 4, _('Damaged memorials')
     MOVED = 5, _('Moved memorials')
     DEPOSITED = 6, _('Deposited memorials')

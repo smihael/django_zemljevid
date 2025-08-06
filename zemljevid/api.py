@@ -10,6 +10,7 @@ from django.db import connection
 
 from .models import MemorialImage, AbstractGeoEntry
 from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial
+from .models import ConnectedExternalEntry, ExternalProject
 
 models = [
     PartisanMemorial,
@@ -181,9 +182,40 @@ class GetImagesAPIView(views.APIView):
 
         return Response({'images': image_data})
 
+# Serializer for ConnectedExternalEntry
+class ConnectedExternalEntrySerializer(serializers.ModelSerializer):
+    external_project_name = serializers.CharField(source='external_project.name', read_only=True)
+    class Meta:
+        model = ConnectedExternalEntry
+        fields = ['id', 'external_project', 'external_project_name', 'external_id']
+
+class ConnectedExternalEntryListAPIView(views.APIView):
+    """
+    Returns a list of connected external entries for a given memorial ID and content type (model name).
+    """
+    def get(self, request, *args, **kwargs):
+        model_name = request.query_params.get('model_name')
+        object_id = request.query_params.get('object_id')
+
+        if not model_name or not object_id:
+            return Response({'error': 'model_name and object_id are required'}, status=400)
+
+        try:
+            content_type = ContentType.objects.get(app_label='zemljevid', model=model_name.lower())
+        except ContentType.DoesNotExist:
+            return Response({'error': f'Model name {model_name} is invalid'}, status=400)
+
+        entries = ConnectedExternalEntry.objects.filter(
+            content_type=content_type,
+            object_id=object_id
+        )
+        serializer = ConnectedExternalEntrySerializer(entries, many=True)
+        return Response({'connected_entries': serializer.data})
+
 # URL patterns for the API
 urlpatterns = router.urls 
 urlpatterns += [
     path('get_images/', GetImagesAPIView.as_view(), name='get_images'),
     path('get_layers/', GeoLayerListView.as_view(), name='get_layers'),
+    path('get_connected_external_entries/', ConnectedExternalEntryListAPIView.as_view(), name='get_connected_external_entries'),
 ]
