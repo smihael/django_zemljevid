@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 
 from .models import MemorialImage, AbstractGeoEntry
-from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial
+from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial, OkupacijskeMeje
 from .models import ConnectedExternalEntry, ExternalProject
 
 models = [
@@ -20,6 +20,7 @@ models = [
     PartisanTrail,
     OtherMemorials,
     CroatianPartisanMemorial,
+    OkupacijskeMeje,
 ]
 
 from .serializers import FullGeoEntrySerializer
@@ -28,27 +29,32 @@ from .serializers import FullGeoEntrySerializer
 class BriefGeoEntryViewSet(viewsets.ViewSet):
     table_name = None
     has_status_column = False
+    include_color = False
 
     def list(self, request):
+        extra_props = []
+        if self.has_status_column:
+            extra_props.append("'status', status")
+        if self.include_color:
+            extra_props.append("'color', COALESCE(color, '#FF0000')")
+        props_sql = "'name', name" + ("," + ",".join(extra_props) if extra_props else "")
 
+        hidden_clause = '' if self.include_color else 'AND (hidden IS FALSE OR hidden IS NULL)'
         with connection.cursor() as cursor:
             cursor.execute(f"""
                 SELECT json_build_object(
-                'type', 'FeatureCollection',
-                'features', json_agg(
-                    json_build_object(
-                    'type', 'Feature',
-                    'id', id,
-                    'geometry', ST_AsGeoJSON(geom)::json,
-                    'properties', json_build_object(
-                        'name', name{"," if self.has_status_column else ""}
-                        {"'status', status" if self.has_status_column else ""}
-                    )
-                )
-                )
+                    'type', 'FeatureCollection',
+                    'features', COALESCE(json_agg(
+                        json_build_object(
+                            'type', 'Feature',
+                            'id', id,
+                            'geometry', ST_AsGeoJSON(geom)::json,
+                            'properties', json_build_object({props_sql})
+                        )
+                    ), '[]'::json)
                 ) AS geojson
                 FROM "{self.table_name}"
-                WHERE geom IS NOT NULL AND (hidden IS FALSE OR hidden IS NULL);
+                WHERE geom IS NOT NULL {hidden_clause};
             """)
             row = cursor.fetchone()
         return JsonResponse(row[0])
@@ -85,7 +91,11 @@ for model in models:
     brief_viewset = type(
         f"{model_name}BriefGeoEntryViewSet",
         (BriefGeoEntryViewSet,),
-        {'table_name': model._meta.db_table, 'has_status_column': False if model_name != 'partisanmemorial' else True},
+        {
+            'table_name': model._meta.db_table,
+            'has_status_column': model_name == 'partisanmemorial',
+            'include_color': model_name == 'okupacijskemeje',
+        },
     )
 
     router.register(f"brief/{model_name}", brief_viewset, basename=f'brief_{model_name}')
@@ -185,9 +195,25 @@ class GetImagesAPIView(views.APIView):
 # Serializer for ConnectedExternalEntry
 class ConnectedExternalEntrySerializer(serializers.ModelSerializer):
     external_project_name = serializers.CharField(source='external_project.name', read_only=True)
+    external_url = serializers.SerializerMethodField()
     class Meta:
         model = ConnectedExternalEntry
-        fields = ['id', 'external_project', 'external_project_name', 'external_id']
+        fields = ['id', 'external_project', 'external_project_name', 'external_id', 'external_url']
+
+    def get_external_url(self, obj):
+        pattern = getattr(obj.external_project, 'url', None)
+        ext_id = obj.external_id or ''
+        if not pattern:
+            return None
+        # Replace placeholder if present
+        if '[ID]' in pattern:
+            return pattern.replace('[ID]', ext_id)
+        # If no placeholder but we have an ID, append intelligently
+        if ext_id:
+            if pattern.endswith('/'):
+                return pattern + ext_id
+            return pattern.rstrip('/') + '/' + ext_id
+        return pattern  # pattern without ID
 
 class ConnectedExternalEntryListAPIView(views.APIView):
     """

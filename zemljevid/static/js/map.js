@@ -298,6 +298,9 @@ function displayDetails(layerName, id, marker = null) {
                 pointDetails.innerHTML += details || "No details available for this point.";
             }
 
+            // Fetch and render connected external entries (append after details)
+            fetchConnectedEntries(layerName, id).then(renderConnectedEntries);
+
             let sidebarButtons = document.getElementById('sidebar-buttons');
             sidebarButtons.style.display = 'flex'; // Show the sidebar buttons
             const locirajButton = document.querySelector('button[aria-label="Lociraj"]');
@@ -334,6 +337,52 @@ function displayDetails(layerName, id, marker = null) {
 // Ensure floating search bar is visible by default
 //document.getElementById('floating-search-bar').classList.add('visible');
 
+// Fetch connected external entries for a given model/object
+async function fetchConnectedEntries(model_name, object_id) {
+    try {
+        const url = `/api/get_connected_external_entries/?model_name=${encodeURIComponent(model_name)}&object_id=${encodeURIComponent(object_id)}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+    } catch (err) {
+        console.error('Error fetching connected entries:', err);
+        return { connected_entries: [] };
+    }
+}
+
+// Render connected entries list inside the point details panel
+function renderConnectedEntries(data) {
+    const pointDetails = document.getElementById('point-details');
+    if (!pointDetails) return;
+
+    // Remove previous list if any
+    const previous = document.getElementById('connected-entries');
+    if (previous) previous.remove();
+
+    const container = document.createElement('div');
+    container.id = 'connected-entries';
+    container.className = 'connected-entries';
+
+    const entries = data.connected_entries || [];
+    if (entries.length === 0) {
+        container.innerHTML = '<br /><h4>Povezani vnosi</h4><p>Ni povezanih vnosov.</p>';
+    } else {
+        let listHtml = '<br /><h4>Povezani vnosi</h4><ul style="padding-left:18px;">';
+        listHtml += entries.map(e => {
+            const projectName = e.external_project_name || e.external_project || 'Zunanji vir';
+            const externalId = e.external_id || '';
+            const url = e.external_url || '';
+            if (url) {
+                return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${projectName}: ${externalId}</a></li>`;
+            }
+            return `<li>${projectName}: ${externalId}</li>`;
+        }).join('');
+        listHtml += '</ul>';
+        container.innerHTML = listHtml;
+    }
+
+    pointDetails.appendChild(container);
+}
 
 function updateMapUrl() {
     // Get current map view and layers
@@ -423,20 +472,46 @@ map.on('zoomend', () => {
   }
 });
 
-// Fetch and render markers for the layer
-async function loadMarkersForLayer(layer_model_info,markerClusterGroup) {
+// Fetch and render markers or line features for the layer. Returns the Leaflet layer added.
+async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
     showLoadingCircle();
     const markersUrl = `/api/brief/${layer_model_info.model_name}/`;
-    const response = await fetchWithTimeout(markersUrl);
-    const geojson = await response.json();
-    hideLoadingCircle();
-    console.log(`Markers loaded for layer: ${layer_model_info.model_name}`);
+    let geojson;
+    try {
+        const response = await fetchWithTimeout(markersUrl);
+        geojson = await response.json();
+    } finally {
+        hideLoadingCircle();
+    }
+    console.log(`GeoJSON loaded for layer: ${layer_model_info.model_name}`);
 
-    // Add markers to the layer
+    // Special handling for okupacijske meje (assumed line / multilinestring features)
+    if (layer_model_info.model_name === 'okupacijskemeje') {
+        console.log('Rendering okupacijske meje');
+        const lineLayer = L.geoJSON(geojson, {
+            style: function(feature) {
+                const c = feature.properties && feature.properties.color ? feature.properties.color : '#ff0000';
+                return { color: c, weight: 3, opacity: 0.9 };
+            },
+            onEachFeature: function(feature, layer) {
+                layer._layerName = layer_model_info.model_name;
+                layer.on('click', function() {
+                    if (!layer.getPopup()) {
+                        layer.bindPopup(feature.properties.name || 'Izbrana meja');
+                    }
+                    layer.openPopup();
+                    displayDetails(layer._layerName, feature.id);
+                });
+            }
+        });
+        lineLayer.addTo(map);
+        return lineLayer;
+    }
+
+    // Default: point features rendered as markers (clustered)
     L.geoJSON(geojson, {
-        pointToLayer: function (feature, latlng) {
-            let icon = L.Icon.Default.prototype; 
-
+        pointToLayer: function(feature, latlng) {
+            let icon = L.Icon.Default.prototype;
             if (layer_model_info.icon !== null) {
                 switch (layer_model_info.icon) {
                     case 'hospital':
@@ -445,128 +520,98 @@ async function loadMarkersForLayer(layer_model_info,markerClusterGroup) {
                             iconSize: [20, 20]
                         });
                         break;
-
                     case 'star-icon':
-                        icon = L.divIcon({
-                            className: 'icon star-icon'
-                        });
-
+                        icon = L.divIcon({ className: 'icon star-icon' });
                         if (feature.properties.status) {
                             switch (feature.properties.status) {
                                 case 1:
-                                    icon = L.divIcon({
-                                        className: 'icon star-icon red'
-                                    });
+                                    icon = L.divIcon({ className: 'icon star-icon red' });
                                     break;
                                 case 3:
-                                    icon = L.divIcon({
-                                        className: 'icon star-icon blue'
-                                    });
+                                    icon = L.divIcon({ className: 'icon star-icon blue' });
                                     break;
                                 case 2:
-                                    icon = L.divIcon({
-                                        className: 'icon star-icon green'
-                                    });
+                                    icon = L.divIcon({ className: 'icon star-icon green' });
                                     break;
                             }
                         } else {
-                            // Default to red if no status is set
-                            icon = L.divIcon({
-                                className: 'icon star-icon red'
-                            });
+                            icon = L.divIcon({ className: 'icon star-icon red' });
                         }
                         break;
-                
                     default:
-                        icon = L.divIcon({
-                            className: `icon ${layer_model_info.icon}`,
-                        });
-                        break;                
+                        icon = L.divIcon({ className: `icon ${layer_model_info.icon}` });
+                        break;
                 }
             }
-
-            marker = L.marker(latlng, { icon: icon });
+            const marker = L.marker(latlng, { icon: icon });
             marker._layerName = layer_model_info.model_name;
-
             return marker;
         },
-        onEachFeature: function (feature, layer) {
-
-            layer.on('click', function (e) {
-                var marker = e.target;
+        onEachFeature: function(feature, layer) {
+            layer.on('click', function(e) {
+                const marker = e.target;
                 if (!marker.getPopup()) {
-                marker.bindPopup(feature.properties.name || 'Izbrana točka');
+                    marker.bindPopup(feature.properties.name || 'Izbrana točka');
                 }
                 marker.openPopup();
-       
                 displayDetails(marker._layerName, feature.id);
             });
         }
     }).addTo(markerClusterGroup);
+    return markerClusterGroup;
 }
 
 // Fetch model names and dynamically create marker layers
 async function processGeoLayers() {
-    
     const response = await fetch('/api/get_layers/');
     const layers = await response.json();
 
-    // Add filter options to the navbar
     const filterContainer = document.getElementById('filter-container');
 
-    layers.forEach(layer => {
+    const loadPromises = layers.map(async layer => {
+        let createdLayer;
+        let isLineLayer = (layer.model_name === 'okupacijske_meje');
 
-        // Create marker layer for each model
-        const markerClusterGroup = L.markerClusterGroup({
-            chunkedLoading: true,
-            disableClusteringAtZoom: 12,
-            name: layer.verbose_name_plural,
-        });
+        if (isLineLayer) {
+            // Directly load and add line layer (not clustered)
+            createdLayer = await loadMarkersForLayer(layer, null);
+            createdLayer.addTo(map);
+        } else {
+            const markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                disableClusteringAtZoom: 12,
+                name: layer.verbose_name_plural,
+            });
+            createdLayer = await loadMarkersForLayer(layer, markerClusterGroup);
+            markerClusterGroup.addTo(map);
+        }
 
-        console.log(`Loading markers for layer: ${layer.model_name}`);
-        loadMarkersForLayer(layer, markerClusterGroup);
+        geoLayers.push(createdLayer);
 
-        // Add the layer to the overlay maps
-        //overlayMaps[layer.model_name] = markerClusterGroup;
-        markerClusterGroup.addTo(map); 
-        geoLayers.push(markerClusterGroup)
-
-
+        // Build filter UI
         const filterOption = document.createElement('div');
         filterOption.className = 'filter-option';
-        filterOption.innerHTML = `
-            <label>${layer.verbose_name_plural}</label>
-        `;
-
-        // Initially enable the layer
+        filterOption.innerHTML = `<label>${layer.verbose_name_plural}</label>`;
         filterOption.classList.add('enabled');
         filterOption.title = 'Kliknite za skritje sloja';
 
-        // Add click event to toggle layer visibility
-        filterOption.addEventListener('click', function () {
+        filterOption.addEventListener('click', function() {
             if (filterOption.classList.contains('enabled')) {
-                //map.removeLayer(overlayMaps[layer.model_name]);
-                map.removeLayer(markerClusterGroup);
+                map.removeLayer(createdLayer);
                 filterOption.classList.remove('enabled');
                 filterOption.title = 'Kliknite za prikaz sloja';
             } else {
-                //map.addLayer(overlayMaps[layer.model_name]);
-                map.addLayer(markerClusterGroup);
+                map.addLayer(createdLayer);
                 filterOption.classList.add('enabled');
                 filterOption.title = 'Kliknite za skritje sloja';
             }
         });
 
         filterContainer.appendChild(filterOption);
-
-
-        
     });
 
-    // Update the layer control with the new layers
+    await Promise.all(loadPromises);
     updateLayerControl(baseMaps, overlayMaps);
-    
-
 }
 
 // Call the function to fetch model names and initialize layers

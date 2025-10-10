@@ -13,6 +13,8 @@ from django.core.exceptions import ValidationError
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _, gettext_noop
+from django.core.validators import RegexValidator
+from colorfield.fields import ColorField
 
 class MemorialStatus(models.IntegerChoices):
     NA = 0, _('Not specified')
@@ -269,11 +271,31 @@ class OtherMemorials(Memorial):
 
     def __str__(self):
         return f"Obeležje: {self.name} ({self.pk})"
+
+class OkupacijskeMeje(models.Model):
+    """Model for occupancy/occupation borders (Okupacijske meje)."""
+    name = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Name'))
+    description = django_models.TextField(blank=True, null=True, verbose_name=_('Description'))
+    geom = models.MultiLineStringField(blank=True, null=True, verbose_name=_('Border geometry'))
+    source = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Source'))
+    color = ColorField(default='#FF0000', blank=True, null=True, verbose_name=_('Color'), help_text=_('Color used to style this border on the map.'))
+    hidden = django_models.BooleanField(default=False, verbose_name=_('Hidden (will not be displayed on the map)'))
+
+    class Meta:
+        verbose_name = _('Occupation border')
+        verbose_name_plural = _('Occupation borders')
+
+    def __str__(self):
+        return self.name or f"Meja {self.pk}"
     
 # ExternalProject model
 class ExternalProject(models.Model):
     identifier = models.CharField(max_length=255, primary_key=True)  # Make identifier the primary key
     name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Description'),
+                            help_text=_('Description of the external project. Hints for the user, which part of the link to fill in, etc.'))
+    url = models.URLField(blank=True, null=True, verbose_name=_('URL pattern'), 
+                          help_text=_('URL pattern for the connected entry. Use [ID] as placeholder.'))
     unique_connection = models.BooleanField(default=False)  # To decide if connections should be unique
 
     def __str__(self):

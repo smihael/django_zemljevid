@@ -63,6 +63,17 @@ admin.site.register(PartisanMemorial, PartisanMemorialAdmin)
 
 
 admin.site.register(PartisanTrail, LeafletGeoAdmin)
+from .models import OkupacijskeMeje
+
+@admin.register(OkupacijskeMeje)
+class OkupacijskeMejeAdmin(LeafletGeoAdmin):
+    list_display = ('id', 'name', 'color_swatch', 'source')
+    search_fields = ('name', 'description', 'source')
+    def color_swatch(self, obj):
+        if obj.color:
+            return mark_safe(f'<span style="display:inline-block;width:24px;height:16px;background:{obj.color};border:1px solid #333"></span> {obj.color}')
+        return ''
+    color_swatch.short_description = 'Color'
 
 for model in [
     #MemorialStatus, 

@@ -470,3 +470,6 @@ msgstr "o-projektu/"
 
 msgid "contribute_memorial/"
 msgstr "prispevajte_spomenik/"
+
+msgid "Occupation borders"
+msgstr "Okupacijske meje"
