@@ -30,7 +30,7 @@ class MemorialType(models.TextChoices):
     MONUMENT = 'spomenik', _('Monument')
     STATUE = 'kip', _('Statue')
     PLAQUE = 'plošča', _('Memorial plaque')
-    OBELISK = 'obelisk', _('Obelisk')
+    #OBELISK = 'obelisk', _('Obelisk')
     STONE = 'spominski kamen', _('Memorial stone')
     STOLPERSTEIN = 'spotikavec', _('Stolperstein')
     BUST = 'doprsni kip', _('Bust')
@@ -38,12 +38,16 @@ class MemorialType(models.TextChoices):
     GRAVE = 'grob', _('Grave')
     SCULPTURE = 'skulptura', _('Sculpture')
     MUSEUM = 'muzej', _('Museum')
-    AIRPLANE = 'avion', _('Airplane')
-    ANCHOR = 'sidro', _('Anchor')
+    #AIRPLANE = 'avion', _('Airplane')
+    #ANCHOR = 'sidro', _('Anchor')
     INFOTABLE = 'infotabla', _('Info table')
     MEMORIAL_ROOM = 'spominska soba', _('Memorial room')
-    DIRECTION_SIGN = 'smerokaz', _('Direction sign')
+    #DIRECTION_SIGN = 'smerokaz', _('Direction sign')
     OTHER = 'durgo', _('Other')
+    CHAPEL = 'kapelica', _('Chapel')
+    SIGN = 'zmamenje', _('Sign')
+
+    
 
 class PartisanMemorialCategory(models.Model):
     """
@@ -86,10 +90,10 @@ class Memorial(AbstractGeoEntry):
     """
     
     memorial_access = django_models.TextField(null=True, blank=True, verbose_name=_('Location and access'),
-                                          help_text=_('Enter information about access to the memorial'))
-    memorial_text = tinymce_models.HTMLField(blank=True, null=True, verbose_name=_('Text on the memorial'))
-    memorial_author = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Author of the memorial'))
-    memorial_start = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Time of creation'),)
+                                          help_text=_('Enter information about access to the memorial'), db_collation='slovenian_icu')
+    memorial_text = tinymce_models.HTMLField(blank=True, null=True, verbose_name=_('Text on the memorial'), db_collation='slovenian_icu')
+    memorial_author = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Author of the memorial'), db_collation='slovenian_icu')
+    memorial_start = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Time of creation'), db_collation='slovenian_icu')
 
     status = models.IntegerField(choices=MemorialStatus.choices, default=MemorialStatus.NA, blank=True, null=True, verbose_name=_('Status'))
 
@@ -134,7 +138,7 @@ class AbstractPartisanMemorial(Memorial):
 
     obcina = django_models.CharField(
         max_length=255, blank=True, null=True, verbose_name=_('Municipality'),
-        help_text=_('Enter the name of the municipality where the memorial is located.')
+        help_text=_('Enter the name of the municipality where the memorial is located.'), db_collation='slovenian_icu'
     )
 
     katastrski_podatki = django_models.CharField(

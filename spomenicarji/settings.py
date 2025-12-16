@@ -106,8 +106,8 @@ MIDDLEWARE = [
 ]
 
 LANGUAGES = [
-    ('en', 'English'),
     ('sl', 'Slovenian'),
+    ('en', 'English'),
 ]
 
 LOCALE_PATHS = [
@@ -192,6 +192,20 @@ USE_I18N = True
 
 USE_TZ = True
 
+TINYMCE_DEFAULT_CONFIG = {
+            "theme": "silver",
+            "height": 500,
+            "menubar": False,
+            "browser_spellcheck": True,
+            "plugins": "advlist,autolink,lists,link,image,charmap,preview,anchor,"
+            "searchreplace,visualblocks,code,fullscreen,insertdatetime,media,table,"
+            "help,wordcount",
+            "toolbar": "undo redo | blocks | "
+            "bold italic backcolor | alignleft aligncenter "
+            "alignright alignjustify | bullist numlist outdent indent | "
+            "removeformat | help",
+            'entity_encoding': 'raw', 
+        }
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/

@@ -1,6 +1,10 @@
 import os
 import json
 import urllib.parse
+import re
+import html as html_module
+import re
+import html as html_module
 from pathlib import Path
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -12,6 +16,7 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 from django.utils.html import strip_tags
+from html.parser import HTMLParser
 
 from django.shortcuts import render, get_object_or_404
 from django.views import View
@@ -28,6 +33,110 @@ from .forms import AnonymousMemorialForm
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
+def html_to_text_preserving_breaks(content: str) -> str:
+    """Convert HTML to plain text while preserving logical line breaks.
+
+    - <br> -> newline
+    - block closers (</p>, </div>, </li>, </h1>..</h6>, </tr>) -> newline
+    - remove remaining tags
+    - unescape HTML entities
+    - normalize CRLF/CR to \n and trim trailing spaces around lines
+    """
+    if not content:
+        return ""
+    text = str(content)
+    # Normalize common break tags to newlines
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    # Put a newline at the end of common block-level elements
+    text = re.sub(r"(?i)</(p|div|li|h[1-6]|tr)>", "\n", text)
+    # Remove opening tags of those blocks (we already added breaks on closing)
+    text = re.sub(r"(?i)<(p|div|li|h[1-6]|tr)(\s[^>]*)?>", "", text)
+    # Remove all remaining tags
+    text = strip_tags(text)
+    # Unescape HTML entities (e.g., &nbsp;)
+    text = html_module.unescape(text)
+    # Normalize newlines
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Trim extra spaces around lines but keep explicit line breaks
+    lines = [ln.strip() for ln in text.split("\n")]
+    # Drop accidental consecutive empty lines to at most one
+    normalized_lines = []
+    prev_empty = False
+    for ln in lines:
+        is_empty = (ln == "")
+        if is_empty and prev_empty:
+            continue
+        normalized_lines.append(ln)
+        prev_empty = is_empty
+    return "\n".join(normalized_lines)
+
+
+class _LinkReplacingParser(HTMLParser):
+    """Turn HTML into text while rendering anchors as 'text (href)'.
+
+    Also preserves logical line breaks for <br> and common block-level tags.
+    """
+    _BLOCK_TAGS = {f'h{i}' for i in range(1, 7)} | {'p', 'div', 'li', 'tr'}
+
+    def __init__(self):
+        super().__init__()
+        self._out = []
+        self._in_a = False
+        self._current_href = None
+
+    def handle_starttag(self, tag, attrs):
+        t = tag.lower()
+        if t == 'br':
+            self._out.append('\n')
+        if t == 'a':
+            self._in_a = True
+            self._current_href = None
+            for k, v in attrs:
+                if k.lower() == 'href':
+                    self._current_href = v
+                    break
+
+    def handle_endtag(self, tag):
+        t = tag.lower()
+        if t in self._BLOCK_TAGS:
+            self._out.append('\n')
+        if t == 'a':
+            self._in_a = False
+            self._current_href = None
+
+    def handle_data(self, data):
+        if not data:
+            return
+        if self._in_a and self._current_href:
+            self._out.append(f"{data} ({self._current_href})")
+        else:
+            self._out.append(data)
+
+    def get_text(self) -> str:
+        text = ''.join(self._out)
+        text = html_module.unescape(text)
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        lines = [ln.strip() for ln in text.split('\n')]
+        normalized_lines = []
+        prev_empty = False
+        for ln in lines:
+            is_empty = (ln == '')
+            if is_empty and prev_empty:
+                continue
+            normalized_lines.append(ln)
+            prev_empty = is_empty
+        return '\n'.join(normalized_lines)
+
+
+def html_to_text_with_links(html: str) -> str:
+    """Convert HTML to plain text and render links as 'text (url)'."""
+    try:
+        parser = _LinkReplacingParser()
+        parser.feed(str(html))
+        parser.close()
+        return parser.get_text()
+    except Exception:
+        return html_to_text_preserving_breaks(html)
 
 # class GalleryView(View):
 #     def get(self, request, *args, **kwargs):
@@ -43,7 +152,6 @@ from django.urls import reverse
 #         images = response.data
 
 #         return render(request, 'gallery.html', {'images': images})
-
     
 class GenericDetailView(View):
     def get(self, request, *args, **kwargs):
@@ -68,10 +176,7 @@ class GeopediaDetailView(DetailView):
     template_name = 'generic_detail.html'
     context_object_name = 'entry'
     extra_context = {}
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update(self.extra_context)
-        return context
+
     def get_object(self, queryset=None):
         # Get the model name and object ID from the URL
         model_name = self.kwargs.get('model_name')
@@ -134,8 +239,16 @@ class ExportTableXLSXView(View):
         ws.title = model_name
 
         ws.append(field_names)
+        # Import once (avoid doing it in the inner loop)
+        try:
+            from tinymce.models import HTMLField
+            has_tinymce = True
+        except Exception:
+            HTMLField = None  # type: ignore
+            has_tinymce = False
+
         for obj in queryset.iterator():
-            row = []
+            row_values = []
             for field in field_names:
                 value = getattr(obj, field, '')
                 # If field is datetime, show only date in YYYY-MM-DD format
@@ -147,20 +260,32 @@ class ExportTableXLSXView(View):
                 # Remove timezone info for datetime/time objects
                 if hasattr(value, 'tzinfo') and value.tzinfo is not None:
                     value = value.replace(tzinfo=None)
-                # Convert HTML fields to plain text
-                #if isinstance(value, str) and ('<p>' in value or '<div>' in value or '<br' in value or '<span>' in value or '<li>' in value or '<font>' in value):
-                from tinymce.models import HTMLField
-                if hasattr(model, field) and isinstance(model._meta.get_field(field), HTMLField):
-                    value = strip_tags(value)
-                row.append(value)
-            ws.append(row)
+                # Handle HTML fields (TinyMCE) specially: always render links as 'text (url)'
+                if has_tinymce:
+                    try:
+                        model_field = model._meta.get_field(field)
+                    except Exception:
+                        model_field = None
+                    if model_field is not None and HTMLField and isinstance(model_field, HTMLField):
+                        raw_html = value or ""
+                        value = html_to_text_with_links(raw_html)
+                # Fallback: if value is a string that looks like HTML, preserve breaks and render links as 'text (url)'
+                if isinstance(value, str) and ('<' in value and '>' in value) and (('<br' in value.lower()) or ('<p' in value.lower()) or ('<div' in value.lower()) or ('<a ' in value.lower())):
+                    value = html_to_text_with_links(value)
 
-        # Set overall font to Arial 12
-        from openpyxl.styles import Font
+                row_values.append(value)
+
+            # Append the values
+            ws.append(row_values)
+
+        # Set overall font to Arial 12 and wrap cells that contain newlines
+        from openpyxl.styles import Font, Alignment
         arial_font = Font(name='Arial', size=12)        
         for row in ws.iter_rows():
             for cell in row:
                 cell.font = arial_font
+                if isinstance(cell.value, str) and ('\n' in cell.value):
+                    cell.alignment = Alignment(wrap_text=True)
                 
         # Auto-size columns
         for col_num, column_title in enumerate(field_names, 1):

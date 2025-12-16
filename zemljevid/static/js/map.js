@@ -185,10 +185,12 @@ const dtk50 = L.tileLayer.wms(wmsUrl, {
 });
 
 // Add GURS Orthophoto WMS layer
-var orthophotoLayer = L.tileLayer.wms('https://storitve.eprostor.gov.si/ows-ins-wms/oi/ows/ows?', {
-    layers: 'OI.OrthoimageCoverage',
+// https://storitve.eprostor.gov.si/ows-ins-wms/oi/ows/ows?
+var orthophotoLayer = L.tileLayer.wms(wmsUrl, {
+    layers: 'SI.GURS.ZPDZ:PREGLEDNI_DOF',
     format: 'image/png',
     transparent: true,
+    crs: L.CRS.EPSG3857,
     version: '1.3.0',
     attribution: '© Geodetska uprava Republike Slovenije (GURS)'
 });
