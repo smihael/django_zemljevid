@@ -1,6 +1,7 @@
 from django.contrib.gis.db import models
 from django.db import models as django_models
 from django.db import connection
+from django.db import transaction
 from tinymce import models as tinymce_models
 import os
 from PIL import Image
@@ -370,6 +371,12 @@ class MemorialImage(models.Model):
                                   help_text=_('Enter the date when the image was taken.'))
     license = models.ForeignKey(ImageLicense, on_delete=models.SET_NULL, blank=True, null=True)
     source = models.CharField(max_length=255, blank=True, null=True)
+    order = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        verbose_name=_('Order'),
+        help_text=_('Display order of images for the same memorial (lower value is shown first).')
+    )
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -377,8 +384,21 @@ class MemorialImage(models.Model):
     class Meta:
         verbose_name = _('Memorial Image')
         verbose_name_plural = _('Memorial Images')
+        ordering = ('order', 'id')
 
     def save(self, *args, **kwargs):
+        if self._state.adding and self.content_type_id and self.object_id and self.order == 0:
+            last_order = (
+                type(self).objects.filter(
+                    content_type_id=self.content_type_id,
+                    object_id=self.object_id,
+                )
+                .aggregate(max_order=django_models.Max('order'))
+                .get('max_order')
+                or 0
+            )
+            self.order = last_order + 1
+
         # Set upload_to dynamically before saving
         if self.content_type and self.object_id and self.image:
             # Build the path using content_type and object_id

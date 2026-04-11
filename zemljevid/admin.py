@@ -9,10 +9,13 @@ from django.contrib.gis.db.models import PointField
 
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.admin import GenericTabularInline
 from django import forms
 from django.http import JsonResponse
 from django.urls import path
 from django.utils.html import mark_safe
+from django.db.models import Max
+from django.db import transaction
 
 from zemljevid.models import *
 
@@ -32,13 +35,138 @@ class LogEntryAdmin(admin.ModelAdmin):
     
     list_display = ('action_time', 'user', 'object_repr', 'action_flag', 'change_message')
 
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if not data:
+            return []
+        if isinstance(data, (list, tuple)):
+            return [single_file_clean(d, initial) for d in data]
+        return [single_file_clean(data, initial)]
+
+
+class MemorialBulkImageUploadAdminForm(forms.ModelForm):
+    bulk_images = MultipleFileField(
+        required=False,
+        label=_("Upload multiple images"),
+        help_text=_("You can select multiple files. They will be added to this memorial and appended at the end of the current order."),
+    )
+    bulk_caption = forms.CharField(
+        required=False,
+        label=_("Caption for all uploaded images"),
+    )
+    bulk_author = forms.CharField(
+        required=False,
+        label=_("Author for all uploaded images"),
+    )
+    bulk_date_taken = forms.DateField(
+        required=False,
+        label=_("Date taken for all uploaded images"),
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+    bulk_license = forms.ModelChoiceField(
+        required=False,
+        queryset=ImageLicense.objects.all(),
+        label=_("License for all uploaded images"),
+    )
+    bulk_source = forms.CharField(
+        required=False,
+        label=_("Source for all uploaded images"),
+    )
+
+    class Meta:
+        fields = '__all__'
+
+    class Media:
+        js = ('admin/js/memorialimage_bulk_toggle.js',)
+
+
+class MemorialImageInline(GenericTabularInline):
+    model = MemorialImage
+    ct_field = 'content_type'
+    ct_fk_field = 'object_id'
+    extra = 0
+    ordering = ('order', 'id')
+    fields = ('drag_handle', 'image_preview', 'image', 'order', 'caption', 'author', 'date_taken', 'license', 'source')
+    readonly_fields = ('drag_handle', 'image_preview',)
+
+    class Media:
+        js = ('admin/js/memorialimage_inline_sort.js',)
+        css = {
+            'all': ('admin/css/memorialimage_inline_sort.css',)
+        }
+
+    def drag_handle(self, obj):
+        return mark_safe('<span class="memorialimage-drag-handle" title="Drag to reorder" aria-label="Drag to reorder">↕</span>')
+    drag_handle.short_description = _("Move")
+
+    def image_preview(self, obj):
+        if obj and getattr(obj, 'thumbnail_url', None):
+            return mark_safe(f'<img src="{obj.thumbnail_url}" style="max-height:80px; max-width:120px;" />')
+        return ""
+    image_preview.short_description = _("Preview")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == 'license' and hasattr(formfield.widget, 'can_delete_related'):
+            formfield.widget.can_delete_related = False
+        return formfield
+
+
 class CommonGeoAdmin(admin.ModelAdmin):
+    form = MemorialBulkImageUploadAdminForm
     list_display = ('id', 'name', 'entry_author', 'entry_date', 'last_changed')
     list_filter = ('entry_date', 'last_changed')
     search_fields = ['name', 'description']
     formfield_overrides = {
         PointField: {"widget": LeafletPointFieldWidget},
     }
+    inlines = [MemorialImageInline]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+
+        files = request.FILES.getlist('bulk_images')
+        if not files:
+            return
+
+        obj = form.instance
+        content_type = ContentType.objects.get_for_model(obj, for_concrete_model=False)
+        caption = form.cleaned_data.get('bulk_caption')
+        author = form.cleaned_data.get('bulk_author')
+        date_taken = form.cleaned_data.get('bulk_date_taken')
+        license_obj = form.cleaned_data.get('bulk_license')
+        source = form.cleaned_data.get('bulk_source')
+
+        with transaction.atomic():
+            obj.__class__.objects.select_for_update().filter(pk=obj.pk).first()
+
+            max_order = (
+                MemorialImage.objects.filter(content_type=content_type, object_id=obj.pk)
+                .aggregate(max_order=Max('order'))
+                .get('max_order')
+                or 0
+            )
+
+            for index, uploaded_file in enumerate(files, start=1):
+                MemorialImage.objects.create(
+                    content_type=content_type,
+                    object_id=obj.pk,
+                    image=uploaded_file,
+                    order=max_order + index,
+                    caption=caption,
+                    author=author,
+                    date_taken=date_taken,
+                    license=license_obj,
+                    source=source,
+                )
 
 for model in [
     PartisanHospital,
@@ -135,10 +263,11 @@ class AbstractGeoEntryContentTypeFilter(SimpleListFilter):
 @admin.register(MemorialImage)
 class MemorialImageAdmin(admin.ModelAdmin):
     form = MemorialImageAdminForm
-    list_display = ('image_tag', 'caption', 'copyright', 'object_name')
+    list_display = ('image_tag', 'order', 'caption', 'copyright', 'object_name')
     list_filter = (AbstractGeoEntryContentTypeFilter, 'license', 'author', 'source')
     search_fields = ('caption', 'author', 'license__name')
     list_per_page = 20
+    ordering = ('content_type', 'object_id', 'order', 'id')
 
     def image_tag(self, obj):
         if obj.thumbnail_url:

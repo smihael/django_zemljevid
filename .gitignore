@@ -2,7 +2,9 @@
 .ipynmb_checkpoints/
 __pycache__/
 profiles/
+*.mo
 
 /static/
 media
 zemljevid/migrations
+management

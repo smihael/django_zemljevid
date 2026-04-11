@@ -174,7 +174,7 @@ class GetImagesAPIView(views.APIView):
         images = MemorialImage.objects.filter(
             content_type=content_type,
             object_id=object_id
-        )
+        ).order_by('order', 'id')
 
         # Serialize image data
         image_data = [
@@ -182,6 +182,7 @@ class GetImagesAPIView(views.APIView):
                 'url': image.image.url,
                 'thumbnail_url': image.thumbnail_url,
                 'filename': image.image.name.split('/')[-1] if image.image else None,
+                'order': image.order,
                 'caption': image.caption,
                 'author': image.author,
                 'license': image.license.name if image.license else None,
