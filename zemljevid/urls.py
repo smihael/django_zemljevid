@@ -39,5 +39,6 @@ urlpatterns = [
         missing_memorial_view,
         name='contribute_memorial'
     ),
-]
+    path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type='text/plain'))
+    ]
 

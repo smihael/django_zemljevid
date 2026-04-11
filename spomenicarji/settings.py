@@ -247,7 +247,7 @@ MAP_WIDGETS = {
             "mapOptions": {"zoom": 12, "scrollWheelZoom": False},
             "tileLayer": {
                 "urlTemplate": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "options": {"maxZoom": 20},
+                "options": {"maxZoom": 20, "referrerPolicy": "strict-origin"},
             },
             "markerFitZoom": 14,
             "showZoomNavigation": True,

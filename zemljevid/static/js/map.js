@@ -122,7 +122,8 @@ map.addControl(new GeolocateControl());
 // Add OpenStreetMap tile layer
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: 'Osnovni zemljevid: &copy; Sodelavci projekta <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: 'Osnovni zemljevid: &copy; Sodelavci projekta <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    referrerPolicy: 'strict-origin'
 }).addTo(map);
 
 var mtLayer = L.maptilerLayer({
