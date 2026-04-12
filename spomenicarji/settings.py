@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     #moje aplikacije
     "zemljevid",
+    "maintenance_mode"
 ]
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
@@ -104,6 +105,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'pyinstrument.middleware.ProfilerMiddleware',
+    'maintenance_mode.middleware.MaintenanceModeMiddleware'
 ]
 
 LANGUAGES = [
@@ -193,6 +195,20 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Localized date presentation in admin/forms.
+DATE_FORMAT = 'j. F Y'
+SHORT_DATE_FORMAT = 'j. n. Y'
+DATE_INPUT_FORMATS = [
+    '%d. %B %Y',
+    '%d. %b %Y',
+    '%d.%m.%Y',
+    '%d. %m. %Y',
+    '%Y-%m-%d',
+]
+
+# Monday as first day of week in date pickers.
+FIRST_DAY_OF_WEEK = 1
+
 TINYMCE_DEFAULT_CONFIG = {
             "theme": "silver",
             "height": 500,
@@ -263,3 +279,11 @@ MAP_WIDGETS = {
 
 MAPTILER_API_KEY = os.getenv('MAPTILER_API_KEY')
 
+# django-maintenance-mode
+MAINTENANCE_MODE = False
+MAINTENANCE_MODE_TEMPLATE = "503.html"
+# Allow access during maintenance for superusers only
+MAINTENANCE_MODE_IGNORE_SUPERUSER = True
+MAINTENANCE_MODE_IGNORE_STAFF = False
+# Keep admin login reachable so staff can sign in during maintenance
+MAINTENANCE_MODE_IGNORE_ADMIN_SITE = False
