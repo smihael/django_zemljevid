@@ -50,6 +50,14 @@ htmlfield_types = ('HTMLField', 'RichTextField', 'TextField')
 # Dynamically create table and filter classes
 for model in models_list:
     model_name = model.__name__
+    excluded_filter_fields = ['geom', 'hidden']
+    excluded_filter_fields.extend(
+        [
+            field.name
+            for field in model._meta.get_fields()
+            if getattr(field, 'get_internal_type', lambda: None)() == 'ArrayField'
+        ]
+    )
 
     # Prepare render methods for HTML-safe fields
     render_methods = {}
@@ -111,7 +119,7 @@ for model in models_list:
     )
 
     # Create filter class
-    filter_fields = add_lookup_choice_filters(model, exclude=['geom', 'hidden'])
+    filter_fields = add_lookup_choice_filters(model, exclude=excluded_filter_fields)
     filter_class = type(
         f"{model_name}Filter",
         (django_filters.FilterSet,),
@@ -119,7 +127,7 @@ for model in models_list:
             **filter_fields,
             "Meta": type("Meta", (), {
                 "model": model,
-                "exclude": ['geom', 'hidden']
+                "exclude": excluded_filter_fields
             })
         }
     )

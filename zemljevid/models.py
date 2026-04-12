@@ -11,10 +11,11 @@ from django.core.files.storage import default_storage
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.contrib.postgres.fields import ArrayField
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _, gettext_noop
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from colorfield.fields import ColorField
 
 class MemorialStatus(models.IntegerChoices):
@@ -97,7 +98,16 @@ class Memorial(AbstractGeoEntry):
     memorial_start = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Time of creation'), db_collation='slovenian_icu')
 
     status = models.IntegerField(choices=MemorialStatus.choices, default=MemorialStatus.NA, blank=True, null=True, verbose_name=_('Status'))
-
+    vandalism_years = ArrayField(
+        base_field=django_models.PositiveSmallIntegerField(
+            validators=[MinValueValidator(1900), MaxValueValidator(2200)]
+        ),
+        blank=True,
+        default=list,
+        verbose_name=_('Year of vandalization'),
+        help_text=_('Enter one or more years when the memorial was vandalized, comma separated.')
+    )
+    
     remarks = django_models.TextField(blank=True, null=True, verbose_name=_('Remarks'),
                                       help_text=_('Enter additional remarks. These will not be displayed on the map, but will be saved in the database and can be used to filter memorials within the editor.'))
     entry_author = django_models.TextField(max_length=255, blank=True, null=True, verbose_name=_('Entry author'),
@@ -353,12 +363,23 @@ class ImageLicense(models.Model):
         return self.name
 
 
+class ImageDateMode(models.TextChoices):
+    EXACT = 'exact', _('Exact date')
+    APPROXIMATE = 'approximate', _('Approximate date (text)')
+    UNKNOWN = 'unknown', _('Unknown date')
+
+
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 def validate_image_size(image):
     # Limit the image size to 5MB (5 * 1024 * 1024 bytes)
     max_size = 5 * 1024 * 1024
-    if image.size > max_size:
+    try:
+        size = image.size
+    except (FileNotFoundError, OSError):
+        # Broken DB reference to a missing file: do not block saving parent object.
+        return
+    if size > max_size:
         raise ValidationError(_("The image file is too large. Size should be less than 5 MB."))
 
 class MemorialImage(models.Model):
@@ -368,7 +389,21 @@ class MemorialImage(models.Model):
     caption = models.CharField(max_length=255, blank=True, null=True)
     author = models.CharField(max_length=255, blank=True, null=True)
     date_taken = models.DateField(blank=True, null=True, verbose_name=_('Date taken'),
-                                  help_text=_('Enter the date when the image was taken.'))
+                                  help_text=_('Enter the exact date when the image was taken.'))
+    date_mode = models.CharField(
+        max_length=16,
+        choices=ImageDateMode.choices,
+        default=ImageDateMode.EXACT,
+        verbose_name=_('Date mode'),
+        help_text=_('Choose if date is exact, approximate (text), or unknown.')
+    )
+    date_approx_text = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_('Approximate date (text)'),
+        help_text=_('Freeform approximate date, e.g. "around 1970", "early 1950s", "before WWII".')
+    )
     license = models.ForeignKey(ImageLicense, on_delete=models.SET_NULL, blank=True, null=True)
     source = models.CharField(max_length=255, blank=True, null=True)
     order = models.PositiveIntegerField(
@@ -386,6 +421,25 @@ class MemorialImage(models.Model):
         verbose_name_plural = _('Memorial Images')
         ordering = ('order', 'id')
 
+    def clean(self):
+        super().clean()
+
+        if self.date_mode == ImageDateMode.EXACT:
+            if not self.date_taken:
+                raise ValidationError({'date_taken': _('Please provide Date taken for exact date mode.')})
+            self.date_approx_text = None
+            return
+
+        if self.date_mode == ImageDateMode.APPROXIMATE:
+            if not self.date_approx_text:
+                raise ValidationError({'date_approx_text': _('Please provide approximate date text.')})
+            self.date_taken = None
+            return
+
+        if self.date_mode == ImageDateMode.UNKNOWN:
+            self.date_taken = None
+            self.date_approx_text = None
+
     def save(self, *args, **kwargs):
         if self._state.adding and self.content_type_id and self.object_id and self.order == 0:
             last_order = (
@@ -399,8 +453,9 @@ class MemorialImage(models.Model):
             )
             self.order = last_order + 1
 
-        # Set upload_to dynamically before saving
-        if self.content_type and self.object_id and self.image:
+        # Set upload_to dynamically only for newly uploaded files.
+        # Keep existing/legacy paths (e.g. geopedia_slike/...) unchanged.
+        if self.content_type and self.object_id and self.image and not self.image._committed:
             # Build the path using content_type and object_id
             filename = os.path.basename(self.image.name)
             upload_path = f"memorial_images/{self.content_type.model}/{self.object_id}/{filename}"
@@ -421,8 +476,8 @@ class MemorialImage(models.Model):
 
         super().save(*args, **kwargs)
 
-        # Create and save thumbnail
-        if self.image:
+        # Create and save thumbnail only when source file exists.
+        if self.image and self.image.storage.exists(self.image.name):
             self.create_thumbnail()
 
     def get_thumbnail_path(self, image_name=None):
@@ -447,7 +502,11 @@ class MemorialImage(models.Model):
         if not self.image:
             return
 
-        img = Image.open(self.image)
+        try:
+            img = Image.open(self.image)
+        except (FileNotFoundError, OSError):
+            # Broken file reference in DB: skip thumbnail generation.
+            return
         img = img.convert('RGB')
         img.thumbnail(size, Image.LANCZOS)
 

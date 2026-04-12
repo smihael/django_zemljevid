@@ -1,4 +1,7 @@
+import os
+
 from django.contrib import admin
+from django.contrib import messages
 
 # Register your models here.
 
@@ -13,7 +16,9 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from django import forms
 from django.http import JsonResponse
 from django.urls import path
+from django.urls import reverse, NoReverseMatch
 from django.utils.html import mark_safe
+from django.utils.html import format_html
 from django.db.models import Max
 from django.db import transaction
 
@@ -22,6 +27,13 @@ from zemljevid.models import *
 from django.utils.translation import gettext_lazy as _
 
 from django.contrib.admin.models import LogEntry
+from django.contrib.admin.widgets import AdminDateWidget
+
+
+class AdminSlDateWidget(AdminDateWidget):
+    pass
+
+
 @admin.register(LogEntry)
 class LogEntryAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
@@ -33,7 +45,21 @@ class LogEntryAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
     
-    list_display = ('action_time', 'user', 'object_repr', 'action_flag', 'change_message')
+    list_display = ('action_time', 'user', 'object_link', 'action_flag', 'change_message')
+
+    def object_link(self, obj):
+        if not obj.content_type_id or not obj.object_id:
+            return obj.object_repr
+
+        app_label = obj.content_type.app_label
+        model = obj.content_type.model
+        try:
+            url = reverse(f'admin:{app_label}_{model}_change', args=[obj.object_id])
+            return format_html('<a href="{}">{}</a>', url, obj.object_repr)
+        except NoReverseMatch:
+            return obj.object_repr
+    object_link.short_description = _('Object')
+    object_link.admin_order_field = 'object_repr'
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -69,7 +95,19 @@ class MemorialBulkImageUploadAdminForm(forms.ModelForm):
     bulk_date_taken = forms.DateField(
         required=False,
         label=_("Date taken for all uploaded images"),
-        widget=forms.DateInput(attrs={'type': 'date'}),
+        widget=AdminSlDateWidget(),
+        input_formats=['%d. %B %Y', '%d. %b %Y', '%d.%m.%Y', '%d. %m. %Y', '%Y-%m-%d'],
+    )
+    bulk_date_mode = forms.ChoiceField(
+        required=False,
+        label=_("Date mode for all uploaded images"),
+        choices=ImageDateMode.choices,
+        initial=ImageDateMode.EXACT,
+    )
+    bulk_date_approx_text = forms.CharField(
+        required=False,
+        label=_("Approximate date text for all uploaded images"),
+        help_text=_("Examples: around 1970, early 1950s, before WWII"),
     )
     bulk_license = forms.ModelChoiceField(
         required=False,
@@ -84,21 +122,65 @@ class MemorialBulkImageUploadAdminForm(forms.ModelForm):
     class Meta:
         fields = '__all__'
 
+    def clean(self):
+        cleaned_data = super().clean()
+        files = self.files.getlist('bulk_images')
+        if not files:
+            return cleaned_data
+
+        mode = cleaned_data.get('bulk_date_mode') or ImageDateMode.EXACT
+        date_taken = cleaned_data.get('bulk_date_taken')
+        date_approx_text = cleaned_data.get('bulk_date_approx_text')
+
+        if mode == ImageDateMode.EXACT:
+            if not date_taken:
+                self.add_error('bulk_date_taken', _('Please provide Date taken for exact date mode.'))
+            cleaned_data['bulk_date_approx_text'] = None
+            return cleaned_data
+
+        cleaned_data['bulk_date_taken'] = None
+
+        if mode == ImageDateMode.APPROXIMATE:
+            if not date_approx_text:
+                self.add_error('bulk_date_approx_text', _('Please provide approximate date text.'))
+            return cleaned_data
+
+        if mode == ImageDateMode.UNKNOWN:
+            cleaned_data['bulk_date_approx_text'] = None
+
+        return cleaned_data
+
     class Media:
         js = ('admin/js/memorialimage_bulk_toggle.js',)
 
 
+class MemorialImageInlineForm(forms.ModelForm):
+    class Meta:
+        model = MemorialImage
+        fields = '__all__'
+        widgets = {
+            'date_taken': AdminSlDateWidget(),
+        }
+
+
 class MemorialImageInline(GenericTabularInline):
     model = MemorialImage
+    form = MemorialImageInlineForm
     ct_field = 'content_type'
     ct_fk_field = 'object_id'
     extra = 0
     ordering = ('order', 'id')
-    fields = ('drag_handle', 'image_preview', 'image', 'order', 'caption', 'author', 'date_taken', 'license', 'source')
+    fields = (
+        'drag_handle', 'image_preview', 'image', 'order', 'caption', 'author',
+        'date_mode', 'date_taken', 'date_approx_text', 'license', 'source'
+    )
     readonly_fields = ('drag_handle', 'image_preview',)
 
     class Media:
-        js = ('admin/js/memorialimage_inline_sort.js',)
+        js = (
+            'admin/js/memorialimage_inline_sort.js',
+            'admin/js/memorialimage_date_mode_guard.js',
+        )
         css = {
             'all': ('admin/css/memorialimage_inline_sort.css',)
         }
@@ -113,13 +195,6 @@ class MemorialImageInline(GenericTabularInline):
         return ""
     image_preview.short_description = _("Preview")
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
-        if db_field.name == 'license' and hasattr(formfield.widget, 'can_delete_related'):
-            formfield.widget.can_delete_related = False
-        return formfield
-
-
 class CommonGeoAdmin(admin.ModelAdmin):
     form = MemorialBulkImageUploadAdminForm
     list_display = ('id', 'name', 'entry_author', 'entry_date', 'last_changed')
@@ -129,6 +204,26 @@ class CommonGeoAdmin(admin.ModelAdmin):
         PointField: {"widget": LeafletPointFieldWidget},
     }
     inlines = [MemorialImageInline]
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        obj = self.get_object(request, object_id)
+        if obj:
+            content_type = ContentType.objects.get_for_model(obj, for_concrete_model=False)
+            broken = [
+                img for img in MemorialImage.objects.filter(
+                    content_type=content_type, object_id=obj.pk
+                )
+                if img.image and not img.image.storage.exists(img.image.name)
+            ]
+            if broken:
+                names = ', '.join(os.path.basename(img.image.name) for img in broken)
+                self.message_user(
+                    request,
+                    _("Warning: the following linked image files are missing from disk "
+                      "and will be skipped during save: %(names)s") % {'names': names},
+                    level=messages.WARNING,
+                )
+        return super().change_view(request, object_id, form_url, extra_context)
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
@@ -142,6 +237,8 @@ class CommonGeoAdmin(admin.ModelAdmin):
         caption = form.cleaned_data.get('bulk_caption')
         author = form.cleaned_data.get('bulk_author')
         date_taken = form.cleaned_data.get('bulk_date_taken')
+        date_mode = form.cleaned_data.get('bulk_date_mode') or ImageDateMode.EXACT
+        date_approx_text = form.cleaned_data.get('bulk_date_approx_text')
         license_obj = form.cleaned_data.get('bulk_license')
         source = form.cleaned_data.get('bulk_source')
 
@@ -164,6 +261,8 @@ class CommonGeoAdmin(admin.ModelAdmin):
                     caption=caption,
                     author=author,
                     date_taken=date_taken,
+                    date_mode=date_mode,
+                    date_approx_text=date_approx_text,
                     license=license_obj,
                     source=source,
                 )
@@ -223,6 +322,9 @@ class MemorialImageAdminForm(forms.ModelForm):
     class Meta:
         model = MemorialImage
         fields = "__all__"
+        widgets = {
+            'date_taken': AdminSlDateWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -263,7 +365,7 @@ class AbstractGeoEntryContentTypeFilter(SimpleListFilter):
 @admin.register(MemorialImage)
 class MemorialImageAdmin(admin.ModelAdmin):
     form = MemorialImageAdminForm
-    list_display = ('image_tag', 'order', 'caption', 'copyright', 'object_name')
+    list_display = ('image_tag', 'order', 'caption', 'date_info', 'copyright', 'object_name')
     list_filter = (AbstractGeoEntryContentTypeFilter, 'license', 'author', 'source')
     search_fields = ('caption', 'author', 'license__name')
     list_per_page = 20
@@ -301,6 +403,14 @@ class MemorialImageAdmin(admin.ModelAdmin):
         if lines:
             return mark_safe("<br>".join(lines))
         return _("Unknown")
+
+    def date_info(self, obj):
+        if obj.date_mode == ImageDateMode.EXACT:
+            return obj.date_taken or _("Missing exact date")
+        if obj.date_mode == ImageDateMode.APPROXIMATE:
+            return f"{obj.get_date_mode_display()}: {obj.date_approx_text or '-'}"
+        return obj.get_date_mode_display()
+    date_info.short_description = _("Date")
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "content_type":
@@ -420,6 +530,7 @@ class MemorialImageAdmin(admin.ModelAdmin):
         js = (
             "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
             "admin/js/memorialimage_dynamic_object_id.js",
+            "admin/js/memorialimage_date_mode_guard.js",
         )
         css = {
             "all": (
