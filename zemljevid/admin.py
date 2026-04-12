@@ -267,15 +267,31 @@ class CommonGeoAdmin(admin.ModelAdmin):
                     source=source,
                 )
 
+
+class PartisanNamingAdminForm(MemorialBulkImageUploadAdminForm):
+    class Meta(MemorialBulkImageUploadAdminForm.Meta):
+        model = PartisanNaming
+        fields = '__all__'
+        labels = {
+            'memorial_start': _('Time of naming, designation'),
+        }
+
+
+class PartisanNamingAdmin(CommonGeoAdmin):
+    form = PartisanNamingAdminForm
+    exclude = ('memorial_text',)
+
+
 for model in [
     PartisanHospital,
-    PartisanNaming,
     PartisanPointsWithoutMemorial,
     OtherMemorials,
     CroatianPartisanMemorial,
     AnonymousSubmission
 ]:
     admin.site.register(model, CommonGeoAdmin)
+
+admin.site.register(PartisanNaming, PartisanNamingAdmin)
 
 
 class PartisanMemorialAdmin(CommonGeoAdmin):

@@ -170,6 +170,10 @@ msgstr "Avtor spomenika"
 msgid "Time of creation"
 msgstr "Čas postavitve ali odkritja"
 
+#: admin.py:286 serializers.py:34
+msgid "Time of naming, designation"
+msgstr "Čas poimenovanja, oznaka"
+
 #: models.py:98
 msgid "Status"
 msgstr "Status"

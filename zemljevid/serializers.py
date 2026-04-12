@@ -1,5 +1,7 @@
 from rest_framework_gis import serializers as gis_serializers
-from .models import MemorialStatus
+from django.utils.translation import gettext_lazy as _
+
+from .models import MemorialStatus, PartisanNaming
 
 class FullGeoEntrySerializer(gis_serializers.GeoFeatureModelSerializer):
     """Base serializer for detailed geo feature data with all fields."""
@@ -22,6 +24,9 @@ class FullGeoEntrySerializer(gis_serializers.GeoFeatureModelSerializer):
         if 'properties' in geojson and model:
             new_properties = {}
             for field_name, value in geojson['properties'].items():
+                if model is PartisanNaming and field_name == 'memorial_text':
+                    continue
+
                 verbose_name = field_name
                 try:
                     model_field = model._meta.get_field(field_name)
@@ -30,6 +35,9 @@ class FullGeoEntrySerializer(gis_serializers.GeoFeatureModelSerializer):
                     serializer_field = self.fields.get(field_name)
                     if serializer_field and getattr(serializer_field, 'label', None):
                         verbose_name = serializer_field.label
+
+                if model is PartisanNaming and field_name == 'memorial_start':
+                    verbose_name = _('Time of naming, designation')
 
                 if field_name.lower() == 'status':
                     try:

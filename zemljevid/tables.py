@@ -50,7 +50,13 @@ htmlfield_types = ('HTMLField', 'RichTextField', 'TextField')
 # Dynamically create table and filter classes
 for model in models_list:
     model_name = model.__name__
+    excluded_table_fields = ['geom', 'hidden']
     excluded_filter_fields = ['geom', 'hidden']
+
+    if model is PartisanNaming:
+        excluded_table_fields.append('memorial_text')
+        excluded_filter_fields.append('memorial_text')
+
     excluded_filter_fields.extend(
         [
             field.name
@@ -101,21 +107,26 @@ for model in models_list:
     render_methods['render_id'] = render_id
 
     # Create table class
+    table_attrs = {
+        **render_methods,
+        "Meta": type("Meta", (), {
+            "model": model,
+            "template_name": "django_tables2/bootstrap4.html",
+            "exclude": excluded_table_fields,
+            "row_attrs": {
+                "data-lat": lambda record: record.geom.y if getattr(record, "geom", None) else "",
+                "data-lng": lambda record: record.geom.x if getattr(record, "geom", None) else "",
+            }
+        })
+    }
+
+    if model is PartisanNaming:
+        table_attrs['memorial_start'] = tables.Column(verbose_name='Čas poimenovanja, oznaka')
+
     table_class = type(
         f"{model_name}Table",
         (tables.Table,),
-        {
-            **render_methods,
-            "Meta": type("Meta", (), {
-                "model": model,
-                "template_name": "django_tables2/bootstrap4.html",
-                "exclude": ["geom", "hidden"],
-                "row_attrs": {
-                    "data-lat": lambda record: record.geom.y if getattr(record, "geom", None) else "",
-                    "data-lng": lambda record: record.geom.x if getattr(record, "geom", None) else "",
-                }
-            })
-        }
+        table_attrs
     )
 
     # Create filter class
