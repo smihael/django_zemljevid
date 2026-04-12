@@ -31,7 +31,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    #"220.ablak.arnes.si",
     "www.partizanstvo.si",
     "partizanstvo.si",
     "localhost",
@@ -42,6 +41,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://partizanstvo.si",
     "https://www.partizanstvo.si",  # če uporabljaš tudi www
 ]
+
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 import socket
 
@@ -253,6 +254,9 @@ MAP_WIDGETS = {
             "showZoomNavigation": True,
             "mapCenterLocation": [DEFAULT_LAT,DEFAULT_LNG],
             "attributionPrefix": "Spomeničarji",
+            },
+            "interactive": {
+                "attributionPrefix": "Spomeničarji",
             }
         }
     }

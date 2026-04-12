@@ -122,7 +122,7 @@ map.addControl(new GeolocateControl());
 // Add OpenStreetMap tile layer
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: 'Osnovni zemljevid: &copy; Sodelavci projekta <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: 'Osnovni zemljevid: &copy; Sodelavci projekta <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL)',
     referrerPolicy: 'strict-origin'
 }).addTo(map);
 
@@ -135,7 +135,7 @@ var mtLayer = L.maptilerLayer({
 
 var openTopoMapLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
     maxZoom: 17,
-    attribution: '&copy; <a href="https://www.opentopomap.org/">OpenTopoMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+    attribution: '&copy; <a href="https://www.opentopomap.org/">OpenTopoMap</a> contributors (CC-BY-SA)'
 });
 
 osmLayer.on('tileerror', function() {
@@ -149,6 +149,7 @@ osmLayer.on('tileerror', function() {
 
 var wmsUrl = 'https://ipi.eprostor.gov.si/wms-si-gurs-dts/wms?';
 //'https://ipi.eprostor.gov.si/gwc-si-gurs-dts/service/wms?'
+var wmsInsUrl = 'https://ipi.eprostor.gov.si/wms-si-gurs-ins/wms?';
 
 const dpk250 = L.tileLayer.wms(wmsUrl, {
   layers: 'SI.GURS.DK:DPK250',
@@ -205,12 +206,45 @@ const lidar = L.tileLayer.wms(wmsUrl, {
   attribution: '© GURS'
 });
 
+const cadastralParcelsOverview = L.tileLayer.wms(wmsInsUrl, {
+    layers: 'cp:CP.CadastralParcel',
+    styles: 'CP.CadastralParcel.Default',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    crs: L.CRS.EPSG3857,
+    attribution: '© GURS'
+});
+
+const cadastralZoningOverview = L.tileLayer.wms(wmsInsUrl, {
+    layers: 'cp:CP.CadastralZoning',
+    styles: 'CP.CadastralZoning.Default',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    crs: L.CRS.EPSG3857,
+    attribution: '© GURS'
+});
+
+const geographicalNamesOverview = L.tileLayer.wms(wmsInsUrl, {
+    layers: 'gn:GN.GeographicalNames',
+    styles: 'GN.GeographicalNames.Default',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    crs: L.CRS.EPSG3857,
+    attribution: '© GURS'
+});
+
 
 // TODO: use GL/Pixi canvas renderer for better performance or switch to openlayers/maplibre
 
 var overlayMaps = {
     "GURS Orthophoto": orthophotoLayer,
     "GURS Lidar": lidar,
+    "GURS Katastrske parcele": cadastralParcelsOverview,
+    //"GURS Katastrska obmocja": cadastralZoningOverview,
+    "Register zemljepisnih imen": geographicalNamesOverview,
     //"GURS Topografska karta (1:50), na voljo samo pri primerni povečavi": gursWmsLayer,
     //'GURS DPK 1:500': dpk500,
     //'GURS DPK 1:250': dpk250,
