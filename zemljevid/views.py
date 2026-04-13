@@ -32,6 +32,21 @@ from rest_framework import status
 from .forms import AnonymousMemorialForm
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
+from django.utils.translation import gettext as _
+
+from .models import (
+    PartisanMemorial,
+    CroatianPartisanMemorial,
+    PartisanHospital,
+    PartisanNaming,
+    PartisanPointsWithoutMemorial,
+    OtherMemorials,
+    ConnectedExternalEntry,
+    MemorialImage,
+)
 
 def html_to_text_preserving_breaks(content: str) -> str:
     """Convert HTML to plain text while preserving logical line breaks.
@@ -137,6 +152,224 @@ def html_to_text_with_links(html: str) -> str:
         return parser.get_text()
     except Exception:
         return html_to_text_preserving_breaks(html)
+
+
+DETAIL_MODELS = (
+    PartisanMemorial,
+    CroatianPartisanMemorial,
+    PartisanHospital,
+    PartisanNaming,
+    PartisanPointsWithoutMemorial,
+    OtherMemorials,
+)
+
+TRANSLATABLE_MODEL_SLUGS = (
+    'partisanmemorial',
+    'croatianpartisanmemorial',
+    'partisanhospital',
+    'partisannaming',
+    'partisanpointswithoutmemorial',
+    'othermemorials',
+)
+
+
+class MemorialPublicDetailView(View):
+    """Public detail page for a single memorial-like point with nearby items."""
+
+    NEARBY_RADIUS_KM = 10
+    NEARBY_LIMIT_PER_MODEL = 12
+    NEARBY_LIMIT_TOTAL = 20
+
+    @staticmethod
+    def _normalize_soft_wrapped_text(text: str) -> str:
+        """Collapse wrapped lines and suppress repeated blank lines."""
+        if not text:
+            return text
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+        text = re.sub(r'[ \t]{2,}', ' ', text)
+        text = re.sub(r'\n{2,}', '\n', text)
+        return text.strip()
+
+    def _slug_to_model_name(self, model_slug: str) -> str:
+        slug = (model_slug or '').lower()
+        for canonical in TRANSLATABLE_MODEL_SLUGS:
+            translated = str(_(canonical)).lower()
+            if slug in {canonical, translated}:
+                return canonical
+        return slug
+
+    def _model_name_to_slug(self, model_name: str) -> str:
+        return str(_((model_name or '').lower()))
+
+    def _resolve_model(self, model_slug):
+        model_name = self._slug_to_model_name(model_slug)
+        try:
+            model = apps.get_model('zemljevid', model_name)
+        except LookupError:
+            return None
+        if model not in DETAIL_MODELS:
+            return None
+        return model
+
+    def _value_to_text(self, value):
+        import datetime
+
+        if value is None:
+            return ''
+        if isinstance(value, (list, tuple, set)):
+            cleaned = [str(v).strip() for v in value if v not in (None, '', []) and str(v).strip() != '']
+            return ', '.join(cleaned)
+        if isinstance(value, (datetime.date, datetime.datetime, datetime.time)):
+            return value.isoformat()
+        if hasattr(value, 'all'):
+            return ', '.join(str(v) for v in value.all())
+        if isinstance(value, str):
+            if ('<' in value and '>' in value) and (
+                ('<br' in value.lower())
+                or ('<p' in value.lower())
+                or ('<div' in value.lower())
+                or ('<a ' in value.lower())
+            ):
+                return self._normalize_soft_wrapped_text(html_to_text_with_links(value))
+            return self._normalize_soft_wrapped_text(value)
+        return str(value)
+
+    def _build_external_url(self, pattern, ext_id):
+        if not pattern:
+            return None
+        ext_id = ext_id or ''
+        if '[ID]' in pattern:
+            return pattern.replace('[ID]', ext_id)
+        if ext_id:
+            if pattern.endswith('/'):
+                return pattern + ext_id
+            return pattern.rstrip('/') + '/' + ext_id
+        return pattern
+
+    def get(self, request, *args, **kwargs):
+        model_slug = kwargs.get('model_slug')
+        object_id = kwargs.get('object_id')
+
+        if not model_slug or not object_id:
+            return JsonResponse({"error": "Missing model_name or object_id"}, status=400)
+
+        model = self._resolve_model(model_slug)
+        if model is None:
+            return JsonResponse({"error": "Model not found"}, status=404)
+
+        obj = get_object_or_404(model, pk=object_id)
+
+        display_fields = []
+        for field in model._meta.fields:
+            if field.name in {'id', 'geom', 'hidden', 'remarks'}:
+                continue
+            raw_value = getattr(obj, field.name, None)
+
+            if getattr(field, 'choices', None):
+                raw_value = dict(field.flatchoices).get(raw_value, raw_value)
+
+            value = self._value_to_text(raw_value)
+            if value in ('', None):
+                continue
+            display_fields.append({
+                'key': str(field.verbose_name).capitalize(),
+                'value': value,
+            })
+
+        for field in model._meta.many_to_many:
+            raw_value = getattr(obj, field.name, None)
+            value = self._value_to_text(raw_value)
+            if value in ('', None):
+                continue
+            display_fields.append({
+                'key': str(field.verbose_name).capitalize(),
+                'value': value,
+            })
+
+        nearby = []
+        if obj.geom:
+            for nearby_model in DETAIL_MODELS:
+                qs = nearby_model.objects.filter(geom__isnull=False)
+                if hasattr(nearby_model, 'hidden'):
+                    qs = qs.filter(hidden=False)
+                if nearby_model == model:
+                    qs = qs.exclude(pk=obj.pk)
+
+                qs = (
+                    qs.annotate(distance=Distance('geom', obj.geom))
+                    .filter(geom__distance_lte=(obj.geom, D(km=self.NEARBY_RADIUS_KM)))
+                    .order_by('distance')[: self.NEARBY_LIMIT_PER_MODEL]
+                )
+
+                for item in qs:
+                    distance_m = getattr(item, 'distance', None)
+                    item_model_name = item._meta.model_name
+                    nearby.append({
+                        'model_name': item_model_name,
+                        'model_slug': self._model_name_to_slug(item_model_name),
+                        'model_verbose': str(item._meta.verbose_name),
+                        'id': item.pk,
+                        'name': item.name or f"#{item.pk}",
+                        'distance_km': round((distance_m.m if distance_m else 0) / 1000, 2),
+                        'lat': item.geom.y if item.geom else None,
+                        'lng': item.geom.x if item.geom else None,
+                    })
+
+            nearby = sorted(nearby, key=lambda x: x['distance_km'])[: self.NEARBY_LIMIT_TOTAL]
+
+        content_type = ContentType.objects.get_for_model(model)
+        images = list(
+            MemorialImage.objects.filter(content_type=content_type, object_id=obj.pk)
+            .order_by('order', 'id')[:12]
+        )
+
+        connected_entries = []
+        ext_entries = ConnectedExternalEntry.objects.select_related('external_project').filter(
+            content_type=content_type,
+            object_id=obj.pk,
+        )
+        for entry in ext_entries:
+            connected_entries.append({
+                'project_name': entry.external_project.name,
+                'external_id': entry.external_id,
+                'url': self._build_external_url(
+                    getattr(entry.external_project, 'url', None),
+                    entry.external_id,
+                ),
+            })
+
+        context = {
+            'model_name': model._meta.model_name,
+            'model_slug': self._model_name_to_slug(model._meta.model_name),
+            'model_verbose_name': str(model._meta.verbose_name),
+            'object_id': obj.pk,
+            'object_name': obj.name or f"#{obj.pk}",
+            'display_fields': display_fields,
+            'lat': obj.geom.y if obj.geom else None,
+            'lng': obj.geom.x if obj.geom else None,
+            'nearby': nearby,
+            'images': images,
+            'connected_entries': connected_entries,
+            'nearby_radius_km': self.NEARBY_RADIUS_KM,
+            'mini_map_data_json': {
+                'lat': obj.geom.y if obj.geom else None,
+                'lng': obj.geom.x if obj.geom else None,
+                'name': obj.name or f"#{obj.pk}",
+                'radius_m': self.NEARBY_RADIUS_KM * 1000,
+            },
+            'nearby_points_json': [
+                {
+                    'lat': item['lat'],
+                    'lng': item['lng'],
+                    'name': item['name'],
+                    'distance_km': item['distance_km'],
+                }
+                for item in nearby
+                if item.get('lat') is not None and item.get('lng') is not None
+            ],
+        }
+        return render(request, 'generic_detail.html', context)
 
 # class GalleryView(View):
 #     def get(self, request, *args, **kwargs):

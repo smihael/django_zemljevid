@@ -3,6 +3,7 @@ from django.db import models as django_models
 from django.db import connection
 from django.db import transaction
 from tinymce import models as tinymce_models
+import re
 import os
 from PIL import Image
 from io import BytesIO
@@ -81,6 +82,30 @@ class AbstractGeoEntry(models.Model):
     geom = models.PointField(blank=True, null=True)
     name = django_models.CharField(max_length=500, blank=True, null=True, verbose_name=_('Name'))
     description = tinymce_models.HTMLField(blank=True, null=True, verbose_name=_('Description'))
+
+    @staticmethod
+    def _description_has_images(value):
+        if not value:
+            return False
+        return re.search(r'<img\b', value, flags=re.IGNORECASE)
+
+    @staticmethod
+    def description_has_links(value):
+        if not value:
+            return False
+        return (
+            re.search(r'<a\b', value, flags=re.IGNORECASE)
+            or re.search(r'(https?://|www\.)', value, flags=re.IGNORECASE)
+        )
+
+    def clean(self):
+        super().clean()
+        if not self._description_has_images(self.description):
+            return
+
+        raise ValidationError({
+            'description': _('Images are not allowed in Description. Upload images via gallery.')
+        })
 
     class Meta:
         abstract = True
@@ -327,16 +352,36 @@ class ConnectedExternalEntry(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
 
     external_project = models.ForeignKey(ExternalProject, on_delete=models.CASCADE)
-    external_id = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('External ID'), help_text=_('External project ID.'))
+    external_id = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('External ID'), help_text=_('ID of the object in the external database. This will be used to construct the URL based on the defined pattern.'))
+    additional_info = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Additional info'), help_text=_('Additional information about the connection, such as name of the object (when there are many entries for the same monument).'))
+    order = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        verbose_name=_('Order'),
+        help_text=_('Display order of connected entries for the same object (lower value is shown first).')
+    )
 
     class Meta:
         verbose_name = _('Connected External Entry')
         verbose_name_plural = _('Connected External Entries')
+        ordering = ('order', 'id')
 
-    def __str__(self):
-        return f"{self.content_object} - {self.external_project.name} - {self.external_id}" if self.content_object else self.external_id
+    #def __str__(self):
+    #    return f"{self.content_object} - {self.external_project.name} - {self.external_id}" if self.content_object else self.external_id
 
     def save(self, *args, **kwargs):
+        if self._state.adding and self.content_type_id and self.object_id and self.order == 0:
+            last_order = (
+                type(self).objects.filter(
+                    content_type_id=self.content_type_id,
+                    object_id=self.object_id,
+                )
+                .aggregate(max_order=django_models.Max('order'))
+                .get('max_order')
+                or 0
+            )
+            self.order = last_order + 1
+
         # Check the unique_connection field of the associated ExternalProject
         if self.external_project.unique_connection:
             # Ensure uniqueness for this combination
@@ -419,10 +464,27 @@ class MemorialImage(models.Model):
     class Meta:
         verbose_name = _('Memorial Image')
         verbose_name_plural = _('Memorial Images')
-        ordering = ('order', 'id')
+        ordering = ('id', 'order')
+
+    def build_image_path(self, filename):
+        """
+        Canonical relative path for all memorial images:
+        <content_type_model>/<object_id>/<filename>
+        """
+        clean_name = os.path.basename(filename or '')
+        if self.content_type and self.object_id and clean_name:
+            return f"{self.content_type.model}/{self.object_id}/{clean_name}"
+        return clean_name
 
     def clean(self):
         super().clean()
+
+        if self.content_type_id and self.object_id:
+            model_class = self.content_type.model_class() if self.content_type else None
+            if not model_class or not issubclass(model_class, AbstractGeoEntry):
+                raise ValidationError({
+                    'content_type': _('The image can only be associated with a model that inherits from AbstractGeoEntry.')
+                })
 
         if self.date_mode == ImageDateMode.EXACT:
             if not self.date_taken:
@@ -453,50 +515,86 @@ class MemorialImage(models.Model):
             )
             self.order = last_order + 1
 
-        # Set upload_to dynamically only for newly uploaded files.
-        # Keep existing/legacy paths (e.g. geopedia_slike/...) unchanged.
-        if self.content_type and self.object_id and self.image and not self.image._committed:
-            # Build the path using content_type and object_id
-            filename = os.path.basename(self.image.name)
-            upload_path = f"memorial_images/{self.content_type.model}/{self.object_id}/{filename}"
-            self.image.name = upload_path
-
+        old = None
         if self.pk:
-            old = type(self).objects.filter(pk=self.pk).first()
-            if old and old.image and self.image and old.image != self.image:
-                if os.path.isfile(old.image.path):
-                    os.remove(old.image.path)
-                # Remove old thumbnail if exists
-                old_thumb_path = self.get_thumbnail_path(old.image.name)
-                if default_storage.exists(old_thumb_path):
-                    default_storage.delete(old_thumb_path)
-        # Ensure the related object is a subclass of AbstractGeoEntry
-        if not issubclass(self.content_object.__class__, AbstractGeoEntry):
-            raise ValidationError(_("The image can only be associated with a model that inherits from AbstractGeoEntry."))
+            old = type(self).objects.filter(pk=self.pk).only('image').first()
+
+        has_new_upload = bool(self.image) and not self.image._committed
+        should_create_thumbnail = has_new_upload
+
+        # Set upload path dynamically for newly uploaded files.
+        # Canonical format is always: <content_type>/<object_id>/<filename>
+        if has_new_upload:
+            target_name = self.build_image_path(self.image.name)
+
+            if old and old.image:
+                old_name = old.image.name
+                # Remove old file if path changes.
+                if old_name and old_name != target_name and default_storage.exists(old_name):
+                    default_storage.delete(old_name)
+
+                # Remove possible legacy/new thumbnail locations for old file.
+                for old_thumb_path in self.get_thumbnail_path_candidates(old_name):
+                    if default_storage.exists(old_thumb_path):
+                        default_storage.delete(old_thumb_path)
+
+            # Overwrite existing target file and thumbnail for deterministic path.
+            if target_name and default_storage.exists(target_name):
+                default_storage.delete(target_name)
+            target_thumb_path = self.get_thumbnail_path(target_name)
+            if target_thumb_path and default_storage.exists(target_thumb_path):
+                default_storage.delete(target_thumb_path)
+
+            self.image.name = target_name
 
         super().save(*args, **kwargs)
 
-        # Create and save thumbnail only when source file exists.
-        if self.image and self.image.storage.exists(self.image.name):
+        # Generate thumbnail only on first upload.
+        if should_create_thumbnail and self.image and self.image.storage.exists(self.image.name):
             self.create_thumbnail()
 
     def get_thumbnail_path(self, image_name=None):
         if not image_name:
             image_name = self.image.name
+        if not image_name:
+            return ''
+        return f"thumb/{image_name}"
 
-        if 'geopedia_slike/' in image_name:
-            return image_name.replace('geopedia_slike/', 'geopedia_slike/thumb/')
-        else:
-            return image_name.replace('memorial_images/', 'memorial_images/thumb/')
+    def get_thumbnail_path_candidates(self, image_name=None):
+        """
+        Candidate thumbnail locations, first being the canonical one.
+        Legacy candidates are kept for backward-compatible reads.
+        """
+        if not image_name:
+            image_name = self.image.name
+        if not image_name:
+            return []
+
+        candidates = [self.get_thumbnail_path(image_name)]
+
+        if image_name.startswith('geopedia_slike/'):
+            candidates.append(image_name.replace('geopedia_slike/', 'geopedia_slike/thumb/', 1))
+        if image_name.startswith('memorial_images/'):
+            candidates.append(image_name.replace('memorial_images/', 'memorial_images/thumb/', 1))
+
+        # Deduplicate while preserving order.
+        return list(dict.fromkeys(candidates))
 
     @property
     def thumbnail_url(self):
-        thumb_path = self.get_thumbnail_path()
-        # Try to use default_storage if file exists, else construct /media/ path
-        if default_storage.exists(thumb_path):
-            return default_storage.url(thumb_path)
-        # Fallback: construct /media/ path
-        return f"/media/{thumb_path}"
+        thumb_candidates = self.get_thumbnail_path_candidates()
+        # Prefer thumbnail when available.
+        for thumb_path in thumb_candidates:
+            if default_storage.exists(thumb_path):
+                return default_storage.url(thumb_path)
+        # Fallback for legacy images without thumbnails.
+        if self.image:
+            try:
+                return self.image.url
+            except ValueError:
+                pass
+        # Last fallback: construct /media/ thumbnail path.
+        return f"/media/{thumb_candidates[0]}" if thumb_candidates else ''
 
     def create_thumbnail(self, size=(300, 300)):
         if not self.image:

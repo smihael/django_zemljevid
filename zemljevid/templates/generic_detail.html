@@ -1,48 +1,177 @@
 {% load static %}
+{% load leaflet_tags %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Podrobnosti spomenika</title>
+    <title>{{ object_name }} – podrobnosti</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="{% static 'map.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+    <link rel="stylesheet" type="text/css" href="{% static 'css/gallery.css' %}">
+    {% leaflet_css %}
+    <style>
+        html, body {
+            height: auto;
+            min-height: 100%;
+            overflow-y: auto;
+        }
+        #mini-map {
+            height: 260px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .details-table {
+            font-size: 0.95rem;
+        }
+        .details-table th,
+        .details-table td {
+            line-height: 1.55;
+        }
+        .gallery-wrap {
+            margin-bottom: 2rem;
+        }
+        .table td {
+            vertical-align: top;
+        }
+    </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-        <a class="navbar-brand" href="/">Partizanski spomeniki</a>
+        <a class="navbar-brand" href="{% url 'map' %}">
+            <img src="{% static 'images/rdeca-zvezdica.svg' %}" alt="Logo" width="30" height="30" class="d-inline-block align-top mr-2">
+            Partizanstvo na zemljevidu
+        </a>
     </nav>
 
     <div class="container mt-5 pt-5">
-        <h1>{{ model_name }}  {{entry.fid}}</h1>
-        <p><strong>Opis:</strong> {{ marker.description }}</p>
-        <p><strong>Lokacija:</strong> {{ marker.latitude }}, {{ marker.longitude }}</p>
-        <a href="/" class="btn btn-primary">Nazaj na zemljevid</a>
-    </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-start mb-3">
+            <div>
+                <h1 class="h3 mb-1">{{ object_name }}</h1>
+                <div class="text-muted">{{ model_verbose_name }} · ID {{ object_id }}</div>
+            </div>
+            <div class="mt-2 mt-md-0">
+                <a href="{% url 'map' %}?layer={{ model_name|urlencode }}&id={{ object_id }}" class="btn btn-primary">Nazaj na zemljevid</a>
+                <a href="/admin/zemljevid/{{ model_name }}/{{ object_id }}/change/" class="btn btn-outline-secondary ml-2">Uredi podrobnosti</a>
+            </div>
+        </div>
 
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Field</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for field, value in fields.items %}
-            <tr>
-                <td>{{ field }}</td>
-                <td>{{ value }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div class="row">
+            <div class="col-lg-8">
+                <h2 class="h5">Podatki</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped details-table">
+                        <tbody>
+                            {% for row in display_fields %}
+                            <tr>
+                                <th style="width: 22%;">{{ row.key }}</th>
+                                <td>{{ row.value|linebreaksbr }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if images %}
+                <div class="gallery-under-title">
+                    <h2 class="h5 mt-2">Galerija</h2>
+                    <div class="gallery-wrap">
+                        <div id="gallery" class="gallery"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if connected_entries %}
+                <h2 class="h5 mt-4">Povezani vnosi</h2>
+                <ul>
+                    {% for entry in connected_entries %}
+                    <li>
+                        {% if entry.url %}
+                            <a href="{{ entry.url }}" target="_blank" rel="noopener">{{ entry.project_name }}{% if entry.external_id %}: {{ entry.external_id }}{% endif %}</a>
+                        {% else %}
+                            {{ entry.project_name }}{% if entry.external_id %}: {{ entry.external_id }}{% endif %}
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+            </div>
+
+            <div class="col-lg-4">
+                <h2 class="h5">Lokacija</h2>
+                {% if lat and lng %}
+                <div id="mini-map" class="mb-3"></div>
+                {% else %}
+                <p class="text-muted">Točka nima geolokacije.</p>
+                {% endif %}
+
+                <h2 class="h5">Spomeniki v bližini ({{ nearby_radius_km }} km)</h2>
+                {% if nearby %}
+                <ul class="pl-3">
+                    {% for item in nearby %}
+                    <li>
+                        <a href="{% url 'memorial_detail' model_slug=item.model_slug object_id=item.id %}">{{ item.name }}</a>
+                        <small class="text-muted">({{ item.distance_km }} km, {{ item.model_verbose }})</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">V izbranem radiju ni drugih spomenikov.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap JS and dependencies -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+    <script src="{% static 'js/gallery.js' %}"></script>
+    {% leaflet_js %}
+    {% if images %}
+    <script>
+        fetchImagesJson('{{ model_name }}', '{{ object_id }}').then(renderGallery);
+    </script>
+    {% endif %}
+    {% if lat and lng %}
+    {{ mini_map_data_json|json_script:"mini-map-data" }}
+    {{ nearby_points_json|json_script:"nearby-points-data" }}
+    <script>
+        const miniMapData = JSON.parse(document.getElementById('mini-map-data').textContent);
+        const nearbyPoints = JSON.parse(document.getElementById('nearby-points-data').textContent);
+        if (
+            Number.isFinite(miniMapData?.lat)
+            && Number.isFinite(miniMapData?.lng)
+        ) {
+            const center = [miniMapData.lat, miniMapData.lng];
+            const map = L.map('mini-map', { scrollWheelZoom: false }).setView(center, 13);
+            map.attributionControl.setPrefix('<a href="https://github.com/smihael/django_zemljevid">Django Zemljevid</a> | &copy; Prostovoljci projekta <a href="/o-projektu">Partizanstvo na zemljevidu</a> (Slike: CC-BY-SA 4.0 z izjemami, podatki: CC 4.0)');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.circle(center, {
+                radius: miniMapData.radius_m,
+                color: '#f05a28',
+                fillOpacity: 0.1
+            }).addTo(map);
+
+            L.marker(center).addTo(map).bindPopup(miniMapData.name || 'Izbrana točka');
+
+            nearbyPoints.forEach(item => {
+                if (Number.isFinite(item?.lat) && Number.isFinite(item?.lng)) {
+                    L.circleMarker([item.lat, item.lng], { radius: 5 }).addTo(map)
+                        .bindPopup(`${item.name} (${item.distance_km} km)`);
+                }
+            });
+        }
+    </script>
+    {% endif %}
 </body>
 </html>

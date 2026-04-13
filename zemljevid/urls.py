@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth import views as auth_views
-from .views import ExportTableCSVView, ExportTableView, ExportTableXLSXView, missing_memorial_view
+from .views import ExportTableCSVView, ExportTableView, ExportTableXLSXView, MemorialPublicDetailView, missing_memorial_view
 
 
 
@@ -20,7 +20,6 @@ urlpatterns = [
         ),
         name='map'
     ),
-    #path('detail/<str:model_name>/<int:object_id>/', GenericDetailView.as_view(), name='generic_detail'),
     path(
         '',
         lambda request: redirect('map', permanent=False),
@@ -34,6 +33,7 @@ urlpatterns = [
     path('export_csv/<str:model_name>/', ExportTableCSVView.as_view(), name='export_csv'),
     path('export_xslx/<str:model_name>/', ExportTableXLSXView.as_view(), name='export_xslx'),
     path('export_table/<str:model_name>/', ExportTableView.as_view(), name='export_table'),
+    path(_('detail/<str:model_slug>/<int:object_id>/'), MemorialPublicDetailView.as_view(), name='memorial_detail'),
     path(
         _('contribute_memorial/'),
         missing_memorial_view,

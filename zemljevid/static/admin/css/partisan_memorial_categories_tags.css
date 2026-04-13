@@ -1,0 +1,40 @@
+/* Tag-like UI for Partisan memorial categories in Django admin */
+#id_memorial_categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+#id_memorial_categories > div {
+    margin: 0;
+}
+
+#id_memorial_categories label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    border: 1px solid var(--hairline-color, #b7b7b7);
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: var(--body-bg, #fff);
+    color: var(--body-fg, #111);
+    user-select: none;
+    transition: all 120ms ease;
+}
+
+#id_memorial_categories label:hover {
+    border-color: var(--link-fg, #0c4b33);
+}
+
+#id_memorial_categories input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#id_memorial_categories label:has(input[type="checkbox"]:checked) {
+    background: var(--button-bg, #0c4b33);
+    color: var(--button-fg, #fff);
+    border-color: var(--button-bg, #0c4b33);
+}

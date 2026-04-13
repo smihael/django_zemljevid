@@ -160,6 +160,7 @@ class MemorialImageInlineForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'date_taken': AdminSlDateWidget(),
+            'order': forms.HiddenInput(),
         }
 
 
@@ -171,10 +172,13 @@ class MemorialImageInline(GenericTabularInline):
     extra = 0
     ordering = ('order', 'id')
     fields = (
-        'drag_handle', 'image_preview', 'image', 'order', 'caption', 'author',
-        'date_mode', 'date_taken', 'date_approx_text', 'license', 'source'
+        'drag_handle', 'image_preview', 'image_name_link', 'caption', 'author',
+        'date_mode', 'date_taken', 'date_approx_text', 'license', 'source', 'order'
     )
-    readonly_fields = ('drag_handle', 'image_preview',)
+    readonly_fields = ('drag_handle', 'image_preview', 'image_name_link')
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
     class Media:
         js = (
@@ -195,6 +199,39 @@ class MemorialImageInline(GenericTabularInline):
         return ""
     image_preview.short_description = _("Preview")
 
+    def image_name_link(self, obj):
+        if not obj or not obj.pk:
+            return ""
+
+        image_name = os.path.basename(getattr(obj.image, 'name', '') or '') or str(obj)
+        url = reverse(
+            f'admin:{obj._meta.app_label}_{obj._meta.model_name}_change',
+            args=[obj.pk],
+        )
+        return format_html('<a href="{}">{}</a>', url, image_name)
+    image_name_link.short_description = _("Image")
+
+
+class ConnectedExternalEntryInlineForm(forms.ModelForm):
+    external_project = forms.ModelChoiceField(
+        queryset=ExternalProject.objects.all(),
+        label=_("Connected entry type"),
+    )
+
+    class Meta:
+        model = ConnectedExternalEntry
+        fields = '__all__'
+
+
+class ConnectedExternalEntryInline(GenericTabularInline):
+    model = ConnectedExternalEntry
+    form = ConnectedExternalEntryInlineForm
+    ct_field = 'content_type'
+    ct_fk_field = 'object_id'
+    extra = 0
+    ordering = ('order', 'id')
+    fields = ('external_project', 'external_id', 'additional_info', 'order')
+
 class CommonGeoAdmin(admin.ModelAdmin):
     form = MemorialBulkImageUploadAdminForm
     list_display = ('id', 'name', 'entry_author', 'entry_date', 'last_changed')
@@ -203,7 +240,16 @@ class CommonGeoAdmin(admin.ModelAdmin):
     formfield_overrides = {
         PointField: {"widget": LeafletPointFieldWidget},
     }
-    inlines = [MemorialImageInline]
+    inlines = [ConnectedExternalEntryInline, MemorialImageInline]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if hasattr(obj, 'description') and AbstractGeoEntry.description_has_links(obj.description):
+            self.message_user(
+                request,
+                _("Warning: links in Description are discouraged. Prefer adding references via Connected External Entries."),
+                level=messages.WARNING,
+            )
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         obj = self.get_object(request, object_id)
@@ -245,19 +291,37 @@ class CommonGeoAdmin(admin.ModelAdmin):
         with transaction.atomic():
             obj.__class__.objects.select_for_update().filter(pk=obj.pk).first()
 
+            existing_images_qs = MemorialImage.objects.filter(content_type=content_type, object_id=obj.pk)
             max_order = (
-                MemorialImage.objects.filter(content_type=content_type, object_id=obj.pk)
+                existing_images_qs
                 .aggregate(max_order=Max('order'))
-                .get('max_order')
-                or 0
+                .get('max_order') or 0
             )
+            existing_paths = set(existing_images_qs.values_list('image', flat=True))
+            next_order = max_order
 
-            for index, uploaded_file in enumerate(files, start=1):
+            for uploaded_file in files:
+                candidate_path = MemorialImage(
+                    content_type=content_type,
+                    object_id=obj.pk,
+                ).build_image_path(uploaded_file.name)
+
+                if candidate_path in existing_paths:
+                    self.message_user(
+                        request,
+                        _(
+                            'Skipped upload for "%(filename)s": an image with the same filename is already linked to this object.'
+                        ) % {'filename': os.path.basename(uploaded_file.name)},
+                        level=messages.WARNING,
+                    )
+                    continue
+
+                next_order += 1
                 MemorialImage.objects.create(
                     content_type=content_type,
                     object_id=obj.pk,
                     image=uploaded_file,
-                    order=max_order + index,
+                    order=next_order,
                     caption=caption,
                     author=author,
                     date_taken=date_taken,
@@ -266,6 +330,7 @@ class CommonGeoAdmin(admin.ModelAdmin):
                     license=license_obj,
                     source=source,
                 )
+                existing_paths.add(candidate_path)
 
 
 class PartisanNamingAdminForm(MemorialBulkImageUploadAdminForm):
@@ -294,7 +359,34 @@ for model in [
 admin.site.register(PartisanNaming, PartisanNamingAdmin)
 
 
+class PartisanMemorialCategoriesAdminForm(MemorialBulkImageUploadAdminForm):
+    class Meta(MemorialBulkImageUploadAdminForm.Meta):
+        model = PartisanMemorial
+        fields = '__all__'
+        widgets = {
+            'memorial_categories': forms.CheckboxSelectMultiple,
+        }
+        labels = {
+            'memorial_categories': _('Partisan memorial categories'),
+        }
+        help_texts = {
+            'memorial_categories': _('Choose all applicable categories.'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields.get('memorial_categories')
+        if field:
+            field.queryset = field.queryset.order_by('name')
+
+    class Media:
+        css = {
+            'all': ('admin/css/partisan_memorial_categories_tags.css',)
+        }
+
+
 class PartisanMemorialAdmin(CommonGeoAdmin):
+    form = PartisanMemorialCategoriesAdminForm
     list_display = tuple(CommonGeoAdmin.list_display) + ('get_memorial_categories',)
     list_filter = tuple(CommonGeoAdmin.list_filter) + ('memorial_categories',)
 
@@ -329,7 +421,9 @@ for model in [
 
 @admin.register(ConnectedExternalEntry)
 class ConnectedExternalEntryAdmin(admin.ModelAdmin):
-    list_display = ('external_project', 'external_id')
+    list_display = ('external_project', 'external_id', 'additional_info')
+    list_filter = ('external_project',)
+    ordering = ('content_type', 'object_id', 'order', 'id')
     #autocomplete_fields = ['object_id'] 
 
 class MemorialImageAdminForm(forms.ModelForm):
@@ -385,7 +479,7 @@ class MemorialImageAdmin(admin.ModelAdmin):
     list_filter = (AbstractGeoEntryContentTypeFilter, 'license', 'author', 'source')
     search_fields = ('caption', 'author', 'license__name')
     list_per_page = 20
-    ordering = ('content_type', 'object_id', 'order', 'id')
+    ordering = ('content_type', 'object_id', 'id')
 
     def image_tag(self, obj):
         if obj.thumbnail_url:

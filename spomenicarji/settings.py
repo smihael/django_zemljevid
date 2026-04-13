@@ -280,7 +280,7 @@ MAP_WIDGETS = {
 MAPTILER_API_KEY = os.getenv('MAPTILER_API_KEY')
 
 # django-maintenance-mode
-MAINTENANCE_MODE = False
+MAINTENANCE_MODE = True
 MAINTENANCE_MODE_TEMPLATE = "503.html"
 # Allow access during maintenance for superusers only
 MAINTENANCE_MODE_IGNORE_SUPERUSER = True

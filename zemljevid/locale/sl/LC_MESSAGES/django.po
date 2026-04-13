@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-05 09:47+0000\n"
+"POT-Creation-Date: 2026-04-13 11:28+0000\n"
 "PO-Revision-Date: 2025-11-06 08:55+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -15,174 +15,262 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=4; plural=(n%100==1 ? 0 : n%100==2 ? 1 : n%100>=3 && "
-"n%100<=4 ? 2 : 3);\n"
+"Plural-Forms: nplurals=4; plural=(n%100==1 ? 0 : n%100==2 ? 1 : n%100>=3 && n"
+"%100<=4 ? 2 : 3);\n"
 "X-Generator: Poedit 3.8\n"
 
-#: admin.py:120
+#: admin.py:61
+#, fuzzy
+#| msgid "Object name"
+msgid "Object"
+msgstr "Ime predmeta"
+
+#: admin.py:84
+msgid "Upload multiple images"
+msgstr ""
+
+#: admin.py:85
+msgid ""
+"You can select multiple files. They will be added to this memorial and "
+"appended at the end of the current order."
+msgstr ""
+
+#: admin.py:89
+msgid "Caption for all uploaded images"
+msgstr ""
+
+#: admin.py:93
+msgid "Author for all uploaded images"
+msgstr ""
+
+#: admin.py:97
+msgid "Date taken for all uploaded images"
+msgstr ""
+
+#: admin.py:103
+msgid "Date mode for all uploaded images"
+msgstr ""
+
+#: admin.py:109
+msgid "Approximate date text for all uploaded images"
+msgstr ""
+
+#: admin.py:110
+msgid "Examples: around 1970, early 1950s, before WWII"
+msgstr ""
+
+#: admin.py:115
+msgid "License for all uploaded images"
+msgstr ""
+
+#: admin.py:119
+msgid "Source for all uploaded images"
+msgstr ""
+
+#: admin.py:137 models.py:429
+msgid "Please provide Date taken for exact date mode."
+msgstr ""
+
+#: admin.py:145 models.py:435
+msgid "Please provide approximate date text."
+msgstr ""
+
+#: admin.py:190
+msgid "Move"
+msgstr ""
+
+#: admin.py:196
+msgid "Preview"
+msgstr ""
+
+#: admin.py:222
+#, python-format
+msgid ""
+"Warning: the following linked image files are missing from disk and will be "
+"skipped during save: %(names)s"
+msgstr ""
+
+#: admin.py:276 serializers.py:40
+msgid "Time of naming, designation"
+msgstr "Čas poimenovanja, oznaka"
+
+#: admin.py:366
 #, fuzzy
 #| msgid "Content"
 msgid "content type"
 msgstr "Vsebina"
 
 # Trenutna sličica
-#: admin.py:155
+#: admin.py:402
 msgid "Current image thumbnail"
 msgstr "Trenutna sličica"
 
-#: admin.py:162
+#: admin.py:409
 msgid "Object name"
 msgstr "Ime predmeta"
 
-#: admin.py:174
+#: admin.py:421
 msgid "Unknown"
 msgstr "Neznano"
 
-#: models.py:20
+#: admin.py:425
+msgid "Missing exact date"
+msgstr ""
+
+#: admin.py:429
+msgid "Date"
+msgstr ""
+
+#: models.py:22
 msgid "Not specified"
 msgstr "Ni določeno"
 
-#: models.py:21
+#: models.py:23
 msgid "Existing memorials"
 msgstr "Obstoječi spomeniki"
 
-#: models.py:22
+#: models.py:24
 msgid "Not visited memorials"
 msgstr "Neobiskani spomeniki"
 
-#: models.py:23
+#: models.py:25
 msgid "Destroyed memorials"
 msgstr "Uničeni spomeniki"
 
-#: models.py:24
+#: models.py:26
 msgid "Damaged memorials"
 msgstr "Poškodovani spomeniki"
 
-#: models.py:25
+#: models.py:27
 msgid "Moved memorials"
 msgstr "Premaknjeni spomeniki"
 
-#: models.py:26
+#: models.py:28
 msgid "Deposited memorials"
 msgstr "Deponirani spomeniki"
 
-#: models.py:30
+#: models.py:32
 msgid "Monument"
 msgstr "Spomenik"
 
-#: models.py:31
+#: models.py:33
 msgid "Statue"
 msgstr "Kip"
 
-#: models.py:32
+#: models.py:34
 msgid "Memorial plaque"
 msgstr "Spominska plošča"
 
-#: models.py:34
+#: models.py:36
 msgid "Memorial stone"
 msgstr "Spominski kamen"
 
-#: models.py:35
+#: models.py:37
 msgid "Stolperstein"
 msgstr "Spotikavec"
 
-#: models.py:36
+#: models.py:38
 msgid "Bust"
 msgstr "Doprsni kip"
 
-#: models.py:37
+#: models.py:39
 msgid "Tombstone"
 msgstr "Nagrobnik"
 
-#: models.py:38
+#: models.py:40
 msgid "Grave"
 msgstr "Grob(išče)"
 
-#: models.py:39
+#: models.py:41
 msgid "Sculpture"
 msgstr "Skulptura"
 
-#: models.py:40
+#: models.py:42
 msgid "Museum"
 msgstr "Muzej"
 
-#: models.py:43
+#: models.py:45
 msgid "Info table"
 msgstr "Infotabla"
 
-#: models.py:44
+#: models.py:46
 msgid "Memorial room"
 msgstr "Spominska soba"
 
-#: models.py:46
+#: models.py:48
 msgid "Other"
 msgstr "Drugo"
 
-#: models.py:47
+#: models.py:49
 msgid "Chapel"
 msgstr "Kapelica"
 
-#: models.py:48
+#: models.py:50
 msgid "Sign"
 msgstr "Znamenje"
 
-#: models.py:57
+#: models.py:59
 msgid "Category Name"
 msgstr "Ime kategorije"
 
-#: models.py:59 models.py:81 models.py:282 models.py:299
+#: models.py:61 models.py:83 models.py:293 models.py:310
 msgid "Description"
 msgstr "Opis"
 
-#: models.py:60
+#: models.py:62
 msgid "Enter a description for the category."
 msgstr "Opiši, kaj spada v kategorijo."
 
-#: models.py:68
+#: models.py:70
 msgid "Partisan Memorial Category"
 msgstr "Kategorija partizanskih spomenikov"
 
-#: models.py:69 models.py:171
+#: models.py:71 models.py:182
 msgid "Partisan Memorial Categories"
 msgstr "Kategorije partizanskih spomenikov"
 
-#: models.py:80 models.py:281
+#: models.py:82 models.py:292
 msgid "Name"
 msgstr "Ime"
 
-#: models.py:92
+#: models.py:94
 msgid "Location and access"
 msgstr "Lokacija in dostop"
 
-#: models.py:93
+#: models.py:95
 msgid "Enter information about access to the memorial"
 msgstr "Opiši dostop do spomenika."
 
-#: models.py:94
+#: models.py:96
 msgid "Text on the memorial"
 msgstr "Besedilo na spomeniku"
 
-#: models.py:95
+#: models.py:97
 msgid "Author of the memorial"
 msgstr "Avtor spomenika"
 
-#: models.py:96
+#: models.py:98
 msgid "Time of creation"
 msgstr "Čas postavitve ali odkritja"
 
-#: admin.py:286 serializers.py:34
-msgid "Time of naming, designation"
-msgstr "Čas poimenovanja, oznaka"
-
-#: models.py:98
+#: models.py:100
 msgid "Status"
 msgstr "Status"
 
-#: models.py:100
+#: models.py:107
+msgid "Year of vandalization"
+msgstr "Leta vandaliziranja"
+
+#: models.py:108
+msgid ""
+"Enter one or more years when the memorial was vandalized, comma separated."
+msgstr ""
+
+#: models.py:111
 msgid "Remarks"
 msgstr "Opombe"
 
-#: models.py:101
+#: models.py:112
 msgid ""
 "Enter additional remarks. These will not be displayed on the map, but will "
 "be saved in the database and can be used to filter memorials within the "
@@ -192,27 +280,27 @@ msgstr ""
 "shranjene v bazi podatkov in jih bo mogoče uporabiti za filtriranje "
 "spomenikov znotraj urejevalnika."
 
-#: models.py:102 models.py:248
+#: models.py:113 models.py:259
 msgid "Entry author"
 msgstr "Ime vnašalca"
 
-#: models.py:103 models.py:249
+#: models.py:114 models.py:260
 msgid "Enter the names of the authors/reporters."
 msgstr "Vnesi imena popisovalcev."
 
-#: models.py:104 models.py:250
+#: models.py:115 models.py:261
 msgid "Entry date"
 msgstr "Datum prvega vnosa"
 
-#: models.py:105
+#: models.py:116
 msgid "Last changed"
 msgstr "Zadnja sprememba"
 
-#: models.py:108
+#: models.py:119
 msgid "Changes, supplements, corrections"
 msgstr "Spremembe, dopolnila, popravki"
 
-#: models.py:109
+#: models.py:120
 msgid ""
 "Here we enter what we have changed, added, or corrected in the existing "
 "record, and current events related to the memorial. We sign and date the "
@@ -221,11 +309,11 @@ msgstr ""
 "Sem vnesemo, kar smo v obstoječem zapisu spremenili, dodali ali popravili, "
 "in aktualne dogodke v zvezi s spomenikom. Podpišemo se in zapis datiramo."
 
-#: models.py:112 models.py:252 models.py:286
+#: models.py:123 models.py:263 models.py:297
 msgid "Hidden (will not be displayed on the map)"
 msgstr "Skrito (ne bo prikazano na zemljevidu)"
 
-#: models.py:113
+#: models.py:124
 msgid ""
 "If checked, the memorial will not be displayed on the map, but will still be "
 "saved in the database and can be edited"
@@ -233,115 +321,115 @@ msgstr ""
 "Če je označeno, spomenik ne bo prikazan na zemljevidu, vendar bo shranjen v "
 "bazi podatkov in ga bo mogoče urejati"
 
-#: models.py:116
+#: models.py:127
 msgid "Memorial"
 msgstr "Spomenik"
 
-#: models.py:117
+#: models.py:128
 msgid "Memorials"
 msgstr "Spomeniki"
 
-#: models.py:134
+#: models.py:145
 msgid "Type of memorial"
 msgstr "Vrsta spomenika"
 
-#: models.py:135
+#: models.py:146
 msgid "Select the type of memorial"
 msgstr "Izberi vrsto spomenika."
 
-#: models.py:140 models.py:226
+#: models.py:151 models.py:237
 msgid "Municipality"
 msgstr "Občina"
 
-#: models.py:141
+#: models.py:152
 msgid "Enter the name of the municipality where the memorial is located."
 msgstr "Vnesi ime občine, kjer se nahaja spomenik."
 
-#: models.py:145 models.py:227
+#: models.py:156 models.py:238
 msgid "Cadastral data"
 msgstr "Katastrski podatki"
 
-#: models.py:146
+#: models.py:157
 msgid "Enter cadastral data if available."
 msgstr "Vnesi katastrske podatke, če so na voljo."
 
-#: models.py:172
+#: models.py:183
 msgid "Select one or more categories for the memorial."
 msgstr "Izberi kategorijo spomenika."
 
-#: models.py:176
+#: models.py:187
 msgid "Partisan memorial"
 msgstr "Partizanski spomenik"
 
-#: models.py:177
+#: models.py:188
 msgid "Partisan memorials"
 msgstr "Partizanski spomeniki"
 
-#: models.py:189
+#: models.py:200
 msgid "Croatian Partisan memorial"
 msgstr "Hrvaški partizanski spomenik"
 
-#: models.py:190
+#: models.py:201
 msgid "Croatian Partisan memorials"
 msgstr "Hrvaški"
 
-#: models.py:198
+#: models.py:209
 msgid "Period of operation"
 msgstr "Obdobje delovanja"
 
-#: models.py:200
+#: models.py:211
 msgid "Partisan hospital"
 msgstr "Partizanska bolnišnica"
 
-#: models.py:201
+#: models.py:212
 msgid "Hospitals"
 msgstr "Bolnišnice"
 
-#: models.py:211
+#: models.py:222
 msgid "Type of naming"
 msgstr "Vrsta poimenovanja"
 
-#: models.py:212
+#: models.py:223
 msgid "inscription on the plaque, official document, folk naming"
 msgstr "Napis na plošči, uradni dokument, ljudsko poimenovanje"
 
-#: models.py:215
+#: models.py:226
 msgid "Partisan naming"
 msgstr "Partizansko poimenovanje"
 
-#: models.py:216
+#: models.py:227
 msgid "Namings"
 msgstr "Poimenovanja"
 
-#: models.py:232
+#: models.py:243
 msgid "Point without memorial"
 msgstr "Točka brez obeležja"
 
-#: models.py:233
+#: models.py:244
 msgid "Points without memorials"
 msgstr "Točke brez obeležja"
 
-#: models.py:242
+#: models.py:253
 msgid "Name of the trail"
 msgstr "Ime poti"
 
-#: models.py:243
+#: models.py:254
 msgid "Enter the name of the Partisan trail."
 msgstr "Vnesi ime partizanske poti."
 
-#: models.py:244
+#: models.py:255
 msgid "Description of the trail"
 msgstr "Opis poti"
 
-#: models.py:245
+#: models.py:256
 msgid "Enter the description of the Partisan trail."
 msgstr "Vnesi opis partizanske poti."
 
-#: models.py:246
+#: models.py:257
 msgid "Geometry of the trail"
 msgstr "Geometrija poti"
 
-#: models.py:253
+#: models.py:264
 msgid ""
 "If checked, the trail will not be displayed on the map, but will still be "
 "saved in the database and can be edited"
@@ -349,19 +437,19 @@ msgstr ""
 "Če je označeno, obhodnica ne bo prikazana na zemljevidu, vendar bo shranjena "
 "v bazi podatkov in jo bo mogoče urejati."
 
-#: models.py:256
+#: models.py:267
 msgid "Partisan trail"
 msgstr "Obhodnice"
 
-#: models.py:257
+#: models.py:268
 msgid "Partisan trails"
 msgstr "Obhodnice"
 
-#: models.py:267
+#: models.py:278
 msgid "Category"
 msgstr "Kategorija"
 
-#: models.py:268
+#: models.py:279
 msgid ""
 "mobilized / partisan without insignia / home guard / Rapallo / "
 "independence / World War I"
@@ -369,39 +457,39 @@ msgstr ""
 "mobilizirani / partizanski brez obeležja / domobranski / rapalski / "
 "osamosvojitveni / prva svetovna vojna"
 
-#: models.py:273
+#: models.py:284
 msgid "Other memorial"
 msgstr "Obeležje"
 
-#: models.py:274
+#: models.py:285
 msgid "Other memorials"
 msgstr "Ostalo"
 
-#: models.py:283
+#: models.py:294
 msgid "Border geometry"
 msgstr "Geometrija meje"
 
-#: models.py:284
+#: models.py:295
 msgid "Source"
 msgstr "Vir"
 
-#: models.py:285
+#: models.py:296
 msgid "Color"
 msgstr "Barva"
 
-#: models.py:285
+#: models.py:296
 msgid "Color used to style this border on the map."
 msgstr "Barva te meje na zemljevidu"
 
-#: models.py:289
+#: models.py:300
 msgid "Occupation border"
 msgstr "Okupacijska meja"
 
-#: models.py:290
+#: models.py:301
 msgid "Occupation borders"
 msgstr "Okupacijske meje"
 
-#: models.py:300
+#: models.py:311
 msgid ""
 "Description of the external project. Hints for the user, which part of the "
 "link to fill in, etc."
@@ -409,94 +497,137 @@ msgstr ""
 "Opis zunanjega projekta. Nasveti za uporabnika, kateri del povezave naj "
 "izpolni itd."
 
-#: models.py:301
+#: models.py:312
 msgid "URL pattern"
 msgstr "Vzorec URL-ja"
 
-#: models.py:302
+#: models.py:313
 #, fuzzy
 msgid "URL pattern for the connected entry. Use [ID] as placeholder."
 msgstr "Vzorec URL-ja za povezani vnos. Uporabite [ID] kot nadomestni znak."
 
-#: models.py:309
+#: models.py:320
 msgid "External project"
 msgstr "Zunanja zbirka"
 
-#: models.py:310
+#: models.py:321
 msgid "External projects"
 msgstr "Zunanje zbirke (seznam)"
 
-#: models.py:319
+#: models.py:330
 msgid "External ID"
 msgstr "Zunanji ID"
 
-#: models.py:319
+#: models.py:330
 msgid "External project ID."
 msgstr "ID v zunanji zbirki"
 
-#: models.py:322
+#: models.py:333
 msgid "Connected External Entry"
 msgstr "Povezani objekt v zunanji zbirki"
 
-#: models.py:323
+#: models.py:334
 msgid "Connected External Entries"
 msgstr "Povezani objekti v zunanjih zbirkah"
 
-#: models.py:337
+#: models.py:348
 msgid "This connection already exists and must be unique."
 msgstr "Ta povezava že obstaja in mora biti edinstvena."
 
-#: models.py:361
+#: models.py:367
+#, fuzzy
+#| msgid "Entry date"
+msgid "Exact date"
+msgstr "Datum prvega vnosa"
+
+#: models.py:368 models.py:404
+msgid "Approximate date (text)"
+msgstr ""
+
+#: models.py:369
+#, fuzzy
+#| msgid "Unknown"
+msgid "Unknown date"
+msgstr "Neznano"
+
+#: models.py:383
 msgid "The image file is too large. Size should be less than 5 MB."
 msgstr "Slika je prevelika. Priponka mora biti manjša od 5 MB."
 
-#: models.py:365
+#: models.py:387
 msgid "Image"
 msgstr "Slika"
 
-#: models.py:366
+#: models.py:388
 msgid "Upload an image related to the memorial."
 msgstr "Naloži sliko obeležja."
 
-#: models.py:369
+#: models.py:391
 msgid "Date taken"
 msgstr "Datum posnetka"
 
-#: models.py:370
-msgid "Enter the date when the image was taken."
+#: models.py:392
+#, fuzzy
+#| msgid "Enter the date when the image was taken."
+msgid "Enter the exact date when the image was taken."
 msgstr "Vnesi datum posnetka."
 
-#: models.py:378
+#: models.py:397
+#, fuzzy
+#| msgid "Date taken"
+msgid "Date mode"
+msgstr "Datum posnetka"
+
+#: models.py:398
+msgid "Choose if date is exact, approximate (text), or unknown."
+msgstr ""
+
+#: models.py:405
+msgid ""
+"Freeform approximate date, e.g. \"around 1970\", \"early 1950s\", \"before "
+"WWII\"."
+msgstr ""
+
+#: models.py:412
+msgid "Order"
+msgstr ""
+
+#: models.py:413
+msgid ""
+"Display order of images for the same memorial (lower value is shown first)."
+msgstr ""
+
+#: models.py:420
 msgid "Memorial Image"
 msgstr "Slika spomenika"
 
-#: models.py:379
+#: models.py:421
 msgid "Memorial Images"
 msgstr "Slike spomenikov"
 
-#: models.py:400
+#: models.py:475
 msgid ""
 "The image can only be associated with a model that inherits from "
 "AbstractGeoEntry."
 msgstr "Sliko je mogoče povezati samo z modelom iz AbstractGeoEntry."
 
-#: models.py:444
+#: models.py:523
 msgid "HTML element"
 msgstr "HTML element"
 
-#: models.py:449
+#: models.py:528
 msgid "Language"
 msgstr "Jezik"
 
-#: models.py:450
+#: models.py:529
 msgid "Select the language for the content."
 msgstr "Izberi jezik vsebine."
 
-#: models.py:452
+#: models.py:531
 msgid "Content"
 msgstr "Vsebina"
 
-#: models.py:456 models.py:457
+#: models.py:535 models.py:536
 msgid "Translated Content"
 msgstr "Prevedena vsebina"
 
@@ -519,6 +650,34 @@ msgstr "o-projektu/"
 #: urls.py:38
 msgid "contribute_memorial/"
 msgstr "prispevajte_spomenik/"
+
+#: urls.py
+msgid "detail/<str:model_slug>/<int:object_id>/"
+msgstr "podrobno/<str:model_slug>/<int:object_id>/"
+
+#: templates/map.html
+msgid "partisanmemorial"
+msgstr "partizanskispomenik"
+
+#: templates/map.html
+msgid "croatianpartisanmemorial"
+msgstr "hrvaskipartizanskispomenik"
+
+#: templates/map.html
+msgid "partisanhospital"
+msgstr "partizanskabolnisnica"
+
+#: templates/map.html
+msgid "partisannaming"
+msgstr "partizanskopoimenovanje"
+
+#: templates/map.html
+msgid "partisanpointswithoutmemorial"
+msgstr "partizansketockebrezobelezja"
+
+#: templates/map.html
+msgid "othermemorials"
+msgstr "ostalaobelezja"
 
 #~ msgid "Obelisk"
 #~ msgstr "Obelisk"

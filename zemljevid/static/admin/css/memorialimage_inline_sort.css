@@ -14,3 +14,28 @@
     opacity: 0.45;
     background: #f5f5f5;
 }
+
+.inline-group td.memorialimage-empty-cell > * {
+    visibility: hidden;
+}
+
+.inline-group td.field-date_taken .memorialimage-date-slot {
+    display: none;
+}
+
+.inline-group td.field-date_taken .memorialimage-date-slot.is-visible {
+    display: block;
+}
+
+.inline-group td.field-date_taken.memorialimage-date-empty {
+    min-height: 30px;
+}
+
+.inline-group td.field-date_approx_text.memorialimage-date-padding-cell {
+    color: transparent;
+}
+
+.inline-group th.column-order,
+.inline-group td.field-order {
+    display: none;
+}
