@@ -419,12 +419,11 @@ for model in [
     TranslatedContent]:
     admin.site.register(model)
 
-@admin.register(ConnectedExternalEntry)
-class ConnectedExternalEntryAdmin(admin.ModelAdmin):
-    list_display = ('external_project', 'external_id', 'additional_info')
-    list_filter = ('external_project',)
-    ordering = ('content_type', 'object_id', 'order', 'id')
-    #autocomplete_fields = ['object_id'] 
+#@admin.register(ConnectedExternalEntry)
+#class ConnectedExternalEntryAdmin(admin.ModelAdmin):
+#    list_display = ('external_project', 'external_id', 'additional_info')
+#    list_filter = ('external_project',)
+#    ordering = ('content_type', 'object_id', 'order', 'id')
 
 class MemorialImageAdminForm(forms.ModelForm):
     object_id = forms.ChoiceField(label="Object", required=True)

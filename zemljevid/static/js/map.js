@@ -409,10 +409,23 @@ function renderConnectedEntries(data) {
             const projectName = e.external_project_name || e.external_project || 'Zunanji vir';
             const externalId = e.external_id || '';
             const url = e.external_url || '';
-            if (url) {
-                return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${projectName}: ${externalId}</a></li>`;
+            const additionalInfo = e.additional_info || '';
+            const isMisc = e.external_project === 'misc';
+
+            let label;
+            if (isMisc) {
+                label = `Druge povezave: ${additionalInfo || externalId || url}`;
+            } else {
+                const idWithAdditionalInfo = additionalInfo && externalId
+                    ? `${externalId} (${additionalInfo})`
+                    : (externalId || additionalInfo);
+                label = `${projectName}: ${idWithAdditionalInfo}`;
             }
-            return `<li>${projectName}: ${externalId}</li>`;
+
+            if (url) {
+                return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a></li>`;
+            }
+            return `<li>${label}</li>`;
         }).join('');
         listHtml += '</ul>';
         container.innerHTML = listHtml;

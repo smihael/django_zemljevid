@@ -89,9 +89,29 @@
                     {% for entry in connected_entries %}
                     <li>
                         {% if entry.url %}
-                            <a href="{{ entry.url }}" target="_blank" rel="noopener">{{ entry.project_name }}{% if entry.external_id %}: {{ entry.external_id }}{% endif %}</a>
+                            <a href="{{ entry.url }}" target="_blank" rel="noopener">
+                                {% if entry.external_project == 'misc' %}
+                                    Druge povezave: {% firstof entry.additional_info entry.external_id entry.url %}
+                                {% else %}
+                                    {{ entry.project_name }}:
+                                    {% if entry.external_id and entry.additional_info %}
+                                        {{ entry.external_id }} ({{ entry.additional_info }})
+                                    {% else %}
+                                        {% firstof entry.external_id entry.additional_info %}
+                                    {% endif %}
+                                {% endif %}
+                            </a>
                         {% else %}
-                            {{ entry.project_name }}{% if entry.external_id %}: {{ entry.external_id }}{% endif %}
+                            {% if entry.external_project == 'misc' %}
+                                Druge povezave: {% firstof entry.additional_info entry.external_id %}
+                            {% else %}
+                                {{ entry.project_name }}:
+                                {% if entry.external_id and entry.additional_info %}
+                                    {{ entry.external_id }} ({{ entry.additional_info }})
+                                {% else %}
+                                    {% firstof entry.external_id entry.additional_info %}
+                                {% endif %}
+                            {% endif %}
                         {% endif %}
                     </li>
                     {% endfor %}

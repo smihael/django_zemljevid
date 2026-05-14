@@ -330,13 +330,20 @@ class MemorialPublicDetailView(View):
             object_id=obj.pk,
         )
         for entry in ext_entries:
+            project_identifier = (entry.external_project_id or '').lower()
+            entry_url = self._build_external_url(
+                getattr(entry.external_project, 'url', None),
+                entry.external_id,
+            )
+            if project_identifier == 'misc':
+                entry_url = entry.external_id or None
+
             connected_entries.append({
+                'external_project': entry.external_project_id,
                 'project_name': entry.external_project.name,
                 'external_id': entry.external_id,
-                'url': self._build_external_url(
-                    getattr(entry.external_project, 'url', None),
-                    entry.external_id,
-                ),
+                'additional_info': entry.additional_info,
+                'url': entry_url,
             })
 
         context = {

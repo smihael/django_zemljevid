@@ -196,25 +196,47 @@ class GetImagesAPIView(views.APIView):
 # Serializer for ConnectedExternalEntry
 class ConnectedExternalEntrySerializer(serializers.ModelSerializer):
     external_project_name = serializers.CharField(source='external_project.name', read_only=True)
+    external_id = serializers.SerializerMethodField()
     external_url = serializers.SerializerMethodField()
     class Meta:
         model = ConnectedExternalEntry
-        fields = ['id', 'external_project', 'external_project_name', 'external_id', 'external_url']
+        fields = ['id', 'external_project', 'external_project_name', 'external_id', 'external_url', 'additional_info']
+
+    def get_external_id(self, obj):
+        project = getattr(obj, 'external_project', None)
+        project_identifier = (getattr(project, 'identifier', '') or '').lower()
+
+        if project_identifier == 'misc':
+            return ''
+
+        return obj.external_id or ''
 
     def get_external_url(self, obj):
-        pattern = getattr(obj.external_project, 'url', None)
+        project = getattr(obj, 'external_project', None)
+        pattern = getattr(project, 'url', None)
+        project_identifier = (getattr(project, 'identifier', '') or '').lower()
         ext_id = obj.external_id or ''
+
+        # For misc projects, use external_id directly as URL
+        if project_identifier == 'misc':
+            return ext_id or None
+
         if not pattern:
             return None
+
         # Replace placeholder if present
         if '[ID]' in pattern:
-            return pattern.replace('[ID]', ext_id)
+            url = pattern.replace('[ID]', ext_id)
         # If no placeholder but we have an ID, append intelligently
-        if ext_id:
+        elif ext_id:
             if pattern.endswith('/'):
-                return pattern + ext_id
-            return pattern.rstrip('/') + '/' + ext_id
-        return pattern  # pattern without ID
+                url = pattern + ext_id
+            else:
+                url = pattern.rstrip('/') + '/' + ext_id
+        else:
+            url = pattern  # pattern without ID
+
+        return url
 
 class ConnectedExternalEntryListAPIView(views.APIView):
     """
