@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
+from django.utils import translation
 
 from .models import MemorialImage, AbstractGeoEntry
 from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial, OkupacijskeMeje
@@ -141,18 +142,22 @@ class GeoLayerListView(views.APIView):
     Returns metadata about all non-abstract subclasses of AbstractGeoEntry.
     """
     def get(self, request):
-        model_descriptions = [
-            {
-                'model_name': model.__name__.lower(),
-                'description': model.__doc__ or 'No description available',
-                'verbose_name': getattr(model._meta, 'verbose_name', 'No verbose name available'),
-                'verbose_name_plural': getattr(model._meta, 'verbose_name_plural', 'No verbose name plural available'),
-                'icon': str(model.icon) if hasattr(model, 'icon') else 'default_icon',
-            }
-            #for model in apps.get_models()
-            #if issubclass(model, AbstractGeoEntry) and not model._meta.abstract
-            for model in models
-        ]
+        requested_lang = request.query_params.get('lang')
+        lang_code = (requested_lang or '').split('-')[0].lower() or None
+
+        with translation.override(lang_code) if lang_code else translation.override(translation.get_language()):
+            model_descriptions = [
+                {
+                    'model_name': model.__name__.lower(),
+                    'description': model.__doc__ or 'No description available',
+                    'verbose_name': str(getattr(model._meta, 'verbose_name', 'No verbose name available')),
+                    'verbose_name_plural': str(getattr(model._meta, 'verbose_name_plural', 'No verbose name plural available')),
+                    'icon': str(model.icon) if hasattr(model, 'icon') else 'default_icon',
+                }
+                #for model in apps.get_models()
+                #if issubclass(model, AbstractGeoEntry) and not model._meta.abstract
+                for model in models
+            ]
         serializer = GeoLayersSerializer(model_descriptions, many=True)
         return response.Response(serializer.data)
 

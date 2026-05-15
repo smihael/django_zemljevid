@@ -616,7 +616,10 @@ async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
 
 // Fetch model names and dynamically create marker layers
 async function processGeoLayers() {
-    const response = await fetch('/api/get_layers/');
+    const langMatch = window.location.pathname.match(/^\/([a-z]{2}(?:-[A-Z]{2})?)\//);
+    const langCode = langMatch ? langMatch[1] : '';
+    const layersApiUrl = langCode ? `/api/get_layers/?lang=${encodeURIComponent(langCode)}` : '/api/get_layers/';
+    const response = await fetch(layersApiUrl);
     const layers = await response.json();
 
     const filterContainer = document.getElementById('filter-container');
