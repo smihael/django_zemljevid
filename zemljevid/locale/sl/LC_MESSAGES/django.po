@@ -743,6 +743,9 @@ msgstr "podrobno/<str:model_slug>/<int:object_id>/"
 msgid "contribute_memorial/"
 msgstr "prispevajte_spomenik/"
 
+msgid "detail"
+msgstr "podrobno"
+
 #~ msgid "External project ID."
 #~ msgstr "ID v zunanji zbirki"
 

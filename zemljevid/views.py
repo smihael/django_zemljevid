@@ -18,7 +18,7 @@ from django.http import HttpResponse
 from django.utils.html import strip_tags
 from html.parser import HTMLParser
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -173,6 +173,19 @@ TRANSLATABLE_MODEL_SLUGS = (
 )
 
 
+def model_slug_to_canonical(model_slug: str) -> str:
+    slug = (model_slug or '').lower()
+    for canonical in TRANSLATABLE_MODEL_SLUGS:
+        translated = str(_(canonical)).lower()
+        if slug in {canonical, translated}:
+            return canonical
+    return slug
+
+
+def canonical_to_translated_slug(model_name: str) -> str:
+    return str(_((model_name or '').lower()))
+
+
 class MemorialPublicDetailView(View):
     """Public detail page for a single memorial-like point with nearby items."""
 
@@ -192,15 +205,10 @@ class MemorialPublicDetailView(View):
         return text.strip()
 
     def _slug_to_model_name(self, model_slug: str) -> str:
-        slug = (model_slug or '').lower()
-        for canonical in TRANSLATABLE_MODEL_SLUGS:
-            translated = str(_(canonical)).lower()
-            if slug in {canonical, translated}:
-                return canonical
-        return slug
+        return model_slug_to_canonical(model_slug)
 
     def _model_name_to_slug(self, model_name: str) -> str:
-        return str(_((model_name or '').lower()))
+        return canonical_to_translated_slug(model_name)
 
     def _resolve_model(self, model_slug):
         model_name = self._slug_to_model_name(model_slug)
@@ -257,6 +265,10 @@ class MemorialPublicDetailView(View):
         model = self._resolve_model(model_slug)
         if model is None:
             return JsonResponse({"error": "Model not found"}, status=404)
+
+        canonical_slug = self._model_name_to_slug(model._meta.model_name)
+        if (model_slug or '').lower() != (canonical_slug or '').lower():
+            return redirect('memorial_detail', model_slug=canonical_slug, object_id=object_id)
 
         obj = get_object_or_404(model, pk=object_id)
 

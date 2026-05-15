@@ -361,7 +361,10 @@ function displayDetails(layerName, id, marker = null) {
 
             if (detailsButton) {
                 detailsButton.onclick = function () {
-                    window.location.href = '/admin/zemljevid/' + layerName + '/' + id + '/change/';
+                    const langMatch = window.location.pathname.match(/^\/([a-z]{2}(?:-[A-Z]{2})?)\//);
+                    const langPrefix = langMatch ? `/${langMatch[1]}` : '/sl';
+                    const detailSegment = window.detailPathSegment || 'detail';
+                    window.location.href = `${langPrefix}/${detailSegment}/${encodeURIComponent(layerName)}/${encodeURIComponent(id)}/`;
                 };
             }
             

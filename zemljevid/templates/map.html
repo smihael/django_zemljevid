@@ -174,7 +174,7 @@
                                 <button id="priblizaj-button" class="btn btn-light btn-sm" aria-label="Približaj in centiraj">
                                     <span class="oi oi-target" alt="Približaj in centiraj"></span> Približaj točko
                                 </button>
-                                <button id="details-open-button" class="btn btn-light btn-sm" aria-label="Odpri podrobnosti">
+                                <button id="details-button" class="btn btn-light btn-sm" aria-label="Odpri podrobnosti">
                                     <span class="oi oi-external-link" alt="Odpri podrobnosti"></span> Odpri podrobnosti
                                 </button>
                             </div>
@@ -222,19 +222,11 @@
       var defaultLat = {{ default_lat }};
       var defaultLng = {{ default_lng }};
       var api_key = "{{ api_key }}";
-      var detailUrlTemplate = "{% url 'memorial_detail' model_slug='__MODEL_SLUG__' object_id=999999999 %}";
-      var detailModelSlugMap = {
-          'partisanmemorial': "{% trans 'partisanmemorial' %}",
-          'croatianpartisanmemorial': "{% trans 'croatianpartisanmemorial' %}",
-          'partisanhospital': "{% trans 'partisanhospital' %}",
-          'partisannaming': "{% trans 'partisannaming' %}",
-          'partisanpointswithoutmemorial': "{% trans 'partisanpointswithoutmemorial' %}",
-          'othermemorials': "{% trans 'othermemorials' %}"
-      };
+      var detailPathSegment = "{% trans 'detail' %}";
   </script>
 
   <script defer src="{% static 'js/gallery.js' %}"></script>
-    <script defer src="{% static 'js/map.js' %}?v=2026-05-14"></script>
+    <script defer src="{% static 'js/map.js' %}?v=2026-05-15"></script>
 
 </body>
 </html>
