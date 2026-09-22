@@ -6,10 +6,12 @@ from django.urls import reverse
 
 from .models import (
     PartisanMemorial,
+    CroatianPartisanMemorial,
     PartisanHospital,
     PartisanNaming,
     PartisanPointsWithoutMemorial,
-    OtherMemorials
+    OtherMemorials,
+    PartisanTrail,
 )
 
 import bleach
@@ -39,10 +41,12 @@ def add_lookup_choice_filters(model, exclude=None):
 # List of model classes
 models_list = [
     PartisanMemorial,
+    CroatianPartisanMemorial,
     PartisanHospital,
     PartisanNaming,
     PartisanPointsWithoutMemorial,
-    OtherMemorials
+    OtherMemorials,
+    PartisanTrail,
 ]
 
 htmlfield_types = ('HTMLField', 'RichTextField', 'TextField')
@@ -114,8 +118,8 @@ for model in models_list:
             "template_name": "django_tables2/bootstrap4.html",
             "exclude": excluded_table_fields,
             "row_attrs": {
-                "data-lat": lambda record: record.geom.y if getattr(record, "geom", None) else "",
-                "data-lng": lambda record: record.geom.x if getattr(record, "geom", None) else "",
+                "data-lat": lambda record: getattr(record.geom, "y", "") if getattr(record, "geom", None) else "",
+                "data-lng": lambda record: getattr(record.geom, "x", "") if getattr(record, "geom", None) else "",
             }
         })
     }
