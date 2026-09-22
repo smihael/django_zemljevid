@@ -565,3 +565,23 @@ def missing_memorial_view(request):
     else:
         form = AnonymousMemorialForm()
     return render(request, 'zemljevid/missing_memorial.html', {'form': form})
+
+class StatisticsView(View):
+    """Public statistics page: number of memorials per category and in total."""
+
+    def get(self, request, *args, **kwargs):
+        categories = []
+        total_visible = 0
+        for model in DETAIL_MODELS:
+            visible = model.objects.filter(hidden=False).count() if hasattr(model, 'hidden') else model.objects.count()
+            categories.append({
+                'model_name': model._meta.model_name,
+                'name': str(model._meta.verbose_name_plural),
+                'visible': visible,
+            })
+            total_visible += visible
+        context = {
+            'categories': categories,
+            'total_visible': total_visible,
+        }
+        return render(request, 'statistika.html', context)

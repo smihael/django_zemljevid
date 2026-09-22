@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}Statistika – Partizanstvo na zemljevidu{% endblock %}
+{% block extra_css %}
+  <style>
+    .statistika-container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      padding: 2.5rem 2rem 2rem 2rem;
+      margin-top: 5rem;
+      margin-bottom: 2.5rem;
+    }
+    .statistika-title {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #2d3a4a;
+      margin-bottom: 1.2rem;
+    }
+    .statistika-table {
+      font-size: 1.05rem;
+    }
+    .statistika-table th {
+      color: #2d3a4a;
+      border-top: none;
+    }
+    .statistika-table td,
+    .statistika-table th {
+      padding: 0.65rem 0.9rem;
+    }
+    .statistika-table tfoot td {
+      font-weight: 700;
+      color: #2d3a4a;
+      border-top: 2px solid #2d3a4a;
+    }
+    .statistika-note {
+      color: #6c7a89;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 768px) {
+      .statistika-container {
+        padding: 1.2rem 0.5rem;
+        margin-top: 4.5rem;
+      }
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container statistika-container">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <h2 class="text-center statistika-title">Statistika spomenikov</h2>
+      <div class="table-responsive mt-4">
+        <table class="table table-striped statistika-table">
+          <thead>
+            <tr>
+              <th>Kategorija</th>
+              <th class="text-right">Na zemljevidu</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for category in categories %}
+            <tr>
+              <td>{{ category.name }}</td>
+              <td class="text-right">{{ category.visible }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Skupaj</td>
+              <td class="text-right">{{ total_visible }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

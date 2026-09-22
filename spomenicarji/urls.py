@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.conf.urls.static import static
-from django.views.generic.base import RedirectView
+from django.views.generic.base import RedirectView, TemplateView
 
 #wagtail
 #from wagtail.admin import urls as wagtailadmin_urls
@@ -63,10 +63,7 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
 # redirect accounts/login/ → admin/login
     path('accounts/login/', RedirectView.as_view(url='/admin/login/', permanent=True)),
-#    path('robots.txt', static_serve, {
-#        'path': 'robots.txt',
-#        'document_root': settings.STATIC_ROOT or settings.STATICFILES_DIRS[0],
-#    }),
+    path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

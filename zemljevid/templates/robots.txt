@@ -1,4 +1,7 @@
 User-agent: *
 Disallow: /admin/
+Disallow: /api/
 Disallow: /filter/
 Disallow: /*/change/
+Allow: /sl/
+Allow: /en/

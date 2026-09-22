@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth import views as auth_views
-from .views import ExportTableCSVView, ExportTableView, ExportTableXLSXView, MemorialPublicDetailView, missing_memorial_view
+from .views import ExportTableCSVView, ExportTableView, ExportTableXLSXView, MemorialPublicDetailView, StatisticsView, missing_memorial_view
 
 
 
@@ -39,6 +39,10 @@ urlpatterns = [
         missing_memorial_view,
         name='contribute_memorial'
     ),
-    path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type='text/plain'))
+    path(
+        _('statistika/'),
+        StatisticsView.as_view(),
+        name='statistika'
+    ),
     ]
 
