@@ -68,7 +68,13 @@
                             {% for row in display_fields %}
                             <tr>
                                 <th style="width: 22%;">{{ row.key }}</th>
-                                <td>{{ row.value|linebreaksbr }}</td>
+                                <td>
+                                    {% if row.is_html %}
+                                        {{ row.value|safe }}
+                                    {% else %}
+                                        {{ row.value|linebreaksbr }}
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -96,7 +102,7 @@
                                     {{ entry.project_name }}:
                                     {% if entry.external_id and entry.additional_info %}
                                         {{ entry.external_id }} ({{ entry.additional_info }})
-                                    {% else %}
+                                    {% elif entry.external_id or entry.additional_info %}
                                         {% firstof entry.external_id entry.additional_info %}
                                     {% endif %}
                                 {% endif %}
@@ -108,7 +114,7 @@
                                 {{ entry.project_name }}:
                                 {% if entry.external_id and entry.additional_info %}
                                     {{ entry.external_id }} ({{ entry.additional_info }})
-                                {% else %}
+                                {% elif entry.external_id or entry.additional_info %}
                                     {% firstof entry.external_id entry.additional_info %}
                                 {% endif %}
                             {% endif %}

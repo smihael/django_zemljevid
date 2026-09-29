@@ -204,6 +204,21 @@ class MemorialPublicDetailView(View):
         text = re.sub(r'\n{2,}', '\n', text)
         return text.strip()
 
+    @staticmethod
+    def _looks_like_html(value: str) -> bool:
+        if not value:
+            return False
+        return bool(re.search(r'</?[a-zA-Z][^>]*>', value))
+
+    @staticmethod
+    def _looks_like_url(value):
+        if not value:
+            return False
+        value = str(value).strip()
+        if not value:
+            return False
+        return value.startswith(('http://', 'https://', 'mailto:', 'ftp://', 'www.'))
+
     def _slug_to_model_name(self, model_slug: str) -> str:
         return model_slug_to_canonical(model_slug)
 
@@ -220,7 +235,7 @@ class MemorialPublicDetailView(View):
             return None
         return model
 
-    def _value_to_text(self, value):
+    def _normalize_value(self, value, *, mode='display'):
         import datetime
 
         if value is None:
@@ -233,15 +248,18 @@ class MemorialPublicDetailView(View):
         if hasattr(value, 'all'):
             return ', '.join(str(v) for v in value.all())
         if isinstance(value, str):
-            if ('<' in value and '>' in value) and (
-                ('<br' in value.lower())
-                or ('<p' in value.lower())
-                or ('<div' in value.lower())
-                or ('<a ' in value.lower())
-            ):
+            if self._looks_like_html(value):
+                if mode == 'display':
+                    return value.strip()
                 return self._normalize_soft_wrapped_text(html_to_text_with_links(value))
             return self._normalize_soft_wrapped_text(value)
         return str(value)
+
+    def _value_to_text(self, value):
+        return self._normalize_value(value, mode='export')
+
+    def _value_for_display(self, value):
+        return self._normalize_value(value, mode='display')
 
     def _build_external_url(self, pattern, ext_id):
         if not pattern:
@@ -281,22 +299,24 @@ class MemorialPublicDetailView(View):
             if getattr(field, 'choices', None):
                 raw_value = dict(field.flatchoices).get(raw_value, raw_value)
 
-            value = self._value_to_text(raw_value)
+            value = self._value_for_display(raw_value)
             if value in ('', None):
                 continue
             display_fields.append({
                 'key': str(field.verbose_name).capitalize(),
                 'value': value,
+                'is_html': self._looks_like_html(value),
             })
 
         for field in model._meta.many_to_many:
             raw_value = getattr(obj, field.name, None)
-            value = self._value_to_text(raw_value)
+            value = self._value_for_display(raw_value)
             if value in ('', None):
                 continue
             display_fields.append({
                 'key': str(field.verbose_name).capitalize(),
                 'value': value,
+                'is_html': self._looks_like_html(value),
             })
 
         nearby = []
@@ -342,13 +362,17 @@ class MemorialPublicDetailView(View):
             object_id=obj.pk,
         )
         for entry in ext_entries:
-            project_identifier = (entry.external_project_id or '').lower()
+            project_identifier = str(entry.external_project_id or '').lower()
             entry_url = self._build_external_url(
                 getattr(entry.external_project, 'url', None),
                 entry.external_id,
             )
             if project_identifier == 'misc':
                 entry_url = entry.external_id or None
+            if not entry_url and self._looks_like_url(entry.additional_info):
+                entry_url = entry.additional_info
+            if not entry_url and self._looks_like_url(entry.external_id):
+                entry_url = entry.external_id
 
             connected_entries.append({
                 'external_project': entry.external_project_id,

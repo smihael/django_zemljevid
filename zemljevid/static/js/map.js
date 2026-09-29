@@ -292,6 +292,14 @@ function updateLayerControl(baseMaps, overlayMaps) {
 updateLayerControl(baseMaps, overlayMaps);
 
 
+function renderDetailValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'string') return String(value);
+    const looksLikeHtml = /<\/?[a-zA-Z][^>]*>/.test(value);
+    if (looksLikeHtml) return value;
+    return value.replace(/\r\n|\r|\n/g, '<br>');
+}
+
 function displayDetails(layerName, id, marker = null) {
     // Fetch the details of the selected marker, parse the response, and update the sidebar
     fetch(`/api/full/${layerName}/${id}`)
@@ -328,7 +336,7 @@ function displayDetails(layerName, id, marker = null) {
 
                 // Map and join the filtered properties
                 var details = filteredProperties
-                    .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                    .map(([key, value]) => `<strong>${key}:</strong> ${renderDetailValue(value)}`)
                     .join('<br>');
 
                 // Update the point details in the sidebar (excluding image fields)
