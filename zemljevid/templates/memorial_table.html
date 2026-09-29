@@ -53,6 +53,51 @@
   flex: 1; /* allows inputs and dropdowns to scale */
 }
 
+.coordinate-filter-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.coordinate-filter-card .coord-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.coordinate-filter-card .coord-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.coordinate-filter-card .coord-axis {
+  border: 1px solid #eef2f7;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.coordinate-filter-card .coord-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.coordinate-filter-card .coord-range .form-label {
+  margin-bottom: 0.2rem;
+}
+
+.coordinate-filter-card .coord-select {
+  max-width: 150px;
+}
+
+.coordinate-filter-card .coord-axis.is-disabled {
+  opacity: 0.6;
+}
+
 #memorial_map {
   min-height: 350px;
   height: 350px;
@@ -73,16 +118,69 @@
   {% if filter %}
   <div class="row justify-content-center">
     <div class="col-md-8">
+      {% if request.GET.geom_missing == 'true' %}
+      <div class="alert alert-warning py-2 px-3 mb-3">
+        Prikazani so samo zapisi brez koordinat.
+      </div>
+      {% endif %}
       <form method="get" class="mb-3 p-3 border rounded bg-light">
-        {% for field in filter.form.visible_fields %}
-        <div class="form-row filter-field{% if forloop.counter > 4 %} d-none extra-filter{% endif %}">
-          <label class="form-label small"><i>{{ field.label }}</i></label>
-          {% if "date" in field.name or "time" in field.name %}
-            {{ field|add_class:"form-control form-control-sm dateinput" }}
-          {% else %}
-            {{ field|add_class:"form-control form-control-sm" }}
-          {% endif %}
+        {% if filter.form.geom_x_min or filter.form.geom_x_max or filter.form.geom_y_min or filter.form.geom_y_max or filter.form.geom_missing %}
+        <div class="coordinate-filter-card">
+          <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+            <strong>Koordinate</strong>
+            <div class="coord-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="use-map-bounds">
+                Uporabi območje na zemljevidu
+              </button>
+            </div>
+          </div>
+
+          <div class="coord-grid">
+            <div class="coord-axis" id="coord-axis-x">
+              <div class="small text-muted mb-2">X</div>
+              <div class="coord-range">
+                <div>
+                  <label class="form-label small mb-1">od</label>
+                  {{ filter.form.geom_x_min|add_class:"form-control form-control-sm" }}
+                </div>
+                <div>
+                  <label class="form-label small mb-1">do</label>
+                  {{ filter.form.geom_x_max|add_class:"form-control form-control-sm" }}
+                </div>
+              </div>
+            </div>
+
+            <div class="coord-axis" id="coord-axis-y">
+              <div class="small text-muted mb-2">Y</div>
+              <div class="coord-range">
+                <div>
+                  <label class="form-label small mb-1">od</label>
+                  {{ filter.form.geom_y_min|add_class:"form-control form-control-sm" }}
+                </div>
+                <div>
+                  <label class="form-label small mb-1">do</label>
+                  {{ filter.form.geom_y_max|add_class:"form-control form-control-sm" }}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
+        {% endif %}
+
+        {% for field in filter.form.visible_fields %}
+          {% if field.name == 'geom_x_min' or field.name == 'geom_x_max' or field.name == 'geom_y_min' or field.name == 'geom_y_max' or field.name == 'geom_missing' %}
+            {# handled in the coordinate block above #}
+          {% else %}
+          <div class="form-row filter-field{% if forloop.counter > 4 %} d-none extra-filter{% endif %}">
+            <label class="form-label small"><i>{{ field.label }}</i></label>
+            {% if "date" in field.name or "time" in field.name %}
+              {{ field|add_class:"form-control form-control-sm dateinput" }}
+            {% else %}
+              {{ field|add_class:"form-control form-control-sm" }}
+            {% endif %}
+          </div>
+          {% endif %}
         {% endfor %}
         
         <div class="d-flex justify-content-between mt-3 align-items-center">
@@ -109,7 +207,40 @@
   </div>
   {% endif %}
 
-  {% render_table table 'bootstrap-table.html' %}
+  {% if request.GET.geom_missing == 'true' %}
+    <div class="row justify-content-center">
+      <div class="col-md-10">
+        <table class="table table-sm table-striped align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Ime</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table.rows %}
+            <tr>
+              <td>{{ row.record.id }}</td>
+              <td>{{ row.record.name|default:"-" }}</td>
+              <td>
+                {% if row.record.id %}
+                  <a href="{{ row.record.get_admin_url }}" target="_blank" class="btn btn-link btn-sm p-0">odpri zapis</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-muted">Ni zapisov brez koordinat.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    {% render_table table 'bootstrap-table.html' %}
+  {% endif %}
 </div>
 
 <!-- Modal for full cell content -->
@@ -168,11 +299,72 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   }
 
   document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('geom_missing') === 'true') {
+      var mapCol = document.getElementById('memorial_map') && document.getElementById('memorial_map').closest('.col-md-4');
+      if (mapCol) {
+        mapCol.style.display = 'none';
+      }
+    }
+
     updateMapMarkers();
     var form = document.querySelector('form');
     if (form) {
       form.addEventListener('submit', function() {
         setTimeout(updateMapMarkers, 700);
+      });
+    }
+
+    function syncCoordFieldsState() {
+      var missingField = document.getElementById('id_geom_missing');
+      var coordFields = ['id_geom_x_min', 'id_geom_x_max', 'id_geom_y_min', 'id_geom_y_max'];
+      var isMissing = missingField && missingField.value === 'true';
+
+      coordFields.forEach(function(id) {
+        var field = document.getElementById(id);
+        if (!field) return;
+        field.disabled = isMissing;
+        var axis = field.closest('.coord-axis');
+        if (axis) {
+          axis.classList.toggle('is-disabled', isMissing);
+        }
+      });
+    }
+
+    var missingField = document.getElementById('id_geom_missing');
+    if (missingField) {
+      syncCoordFieldsState();
+      missingField.addEventListener('change', syncCoordFieldsState);
+    }
+
+    var useMapBoundsBtn = document.getElementById('use-map-bounds');
+    if (useMapBoundsBtn && typeof map !== 'undefined') {
+      useMapBoundsBtn.addEventListener('click', function() {
+        var bounds = map.getBounds();
+        var xMin = document.getElementById('id_geom_x_min');
+        var xMax = document.getElementById('id_geom_x_max');
+        var yMin = document.getElementById('id_geom_y_min');
+        var yMax = document.getElementById('id_geom_y_max');
+
+        if (missingField) {
+          missingField.value = 'unknown';
+        }
+
+        if (xMin) xMin.value = bounds.getWest().toFixed(6);
+        if (xMax) xMax.value = bounds.getEast().toFixed(6);
+        if (yMin) yMin.value = bounds.getSouth().toFixed(6);
+        if (yMax) yMax.value = bounds.getNorth().toFixed(6);
+
+        syncCoordFieldsState();
+      });
+    }
+
+    var missingCoordinatesBtn = document.getElementById('show-missing-coordinates');
+    if (missingCoordinatesBtn && form && missingField) {
+      missingCoordinatesBtn.addEventListener('click', function() {
+        missingField.value = 'true';
+        syncCoordFieldsState();
+        form.requestSubmit ? form.requestSubmit() : form.submit();
       });
     }
   });

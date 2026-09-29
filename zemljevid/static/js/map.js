@@ -399,6 +399,23 @@ async function fetchConnectedEntries(model_name, object_id) {
 }
 
 // Render connected entries list inside the point details panel
+function normalizeWikidataId(value) {
+    if (!value && value !== 0) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const match = text.match(/(?:https?:\/\/(?:www\.)?wikidata\.org\/wiki\/)?(q\d+)/i);
+    if (!match) return null;
+    return match[1].toUpperCase();
+}
+
+function buildWikipediaUrlForExternalProject(externalProject, externalId) {
+    const project = String(externalProject || '').toLowerCase();
+    if (!['wikidata', 'wikidata-item'].includes(project)) return '';
+    const qid = normalizeWikidataId(externalId);
+    if (!qid) return '';
+    return `https://sl.wikipedia.org/wiki/Special:GoToLinkedPage/slwiki/${qid}`;
+}
+
 function renderConnectedEntries(data) {
     const pointDetails = document.getElementById('point-details');
     if (!pointDetails) return;
@@ -416,13 +433,15 @@ function renderConnectedEntries(data) {
         container.innerHTML = '<br /><h4>Povezani vnosi</h4><p>Ni povezanih vnosov.</p>';
     } else {
         let listHtml = '<br /><h4>Povezani vnosi</h4><ul style="padding-left:18px;">';
-        listHtml += entries.map(e => {
+        listHtml += entries.flatMap(e => {
             const projectName = e.external_project_name || e.external_project || 'Zunanji vir';
             const externalId = e.external_id || '';
             const url = e.external_url || '';
             const additionalInfo = e.additional_info || '';
             const isMisc = e.external_project === 'misc';
+            const wikipediaUrl = buildWikipediaUrlForExternalProject(e.external_project, externalId);
 
+            const items = [];
             let label;
             if (isMisc) {
                 label = `Druge povezave: ${additionalInfo || externalId || url}`;
@@ -434,9 +453,16 @@ function renderConnectedEntries(data) {
             }
 
             if (url) {
-                return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a></li>`;
+                items.push(`<li><a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a></li>`);
+            } else {
+                items.push(`<li>${label}</li>`);
             }
-            return `<li>${label}</li>`;
+
+            if (wikipediaUrl) {
+                items.push(`<li><a href="${wikipediaUrl}" target="_blank" rel="noopener noreferrer">Wikipedija</a></li>`);
+            }
+
+            return items;
         }).join('');
         listHtml += '</ul>';
         container.innerHTML = listHtml;

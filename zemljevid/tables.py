@@ -1,5 +1,7 @@
 import django_tables2 as tables
 import django_filters
+from django.contrib.gis.db.models.functions import GeoFunc
+from django.db.models import FloatField
 from django_filters import LookupChoiceFilter
 from django.utils.safestring import mark_safe
 from django.urls import reverse
@@ -36,6 +38,47 @@ def add_lookup_choice_filters(model, exclude=None):
             )
         elif field_type in ('DateField', 'DateTimeField'):
             filters[field.name] = django_filters.DateFromToRangeFilter(field_name=field.name, label=field.verbose_name)
+    return filters
+
+
+class XCoord(GeoFunc):
+    function = 'ST_X'
+    output_field = FloatField()
+
+
+class YCoord(GeoFunc):
+    function = 'ST_Y'
+    output_field = FloatField()
+
+
+def add_coordinate_filters(model):
+    filters = {}
+    geom_field = next((field for field in model._meta.get_fields() if field.name == 'geom'), None)
+    if geom_field is None:
+        return filters
+
+    geom_type = getattr(geom_field, 'get_internal_type', lambda: None)()
+    if geom_type != 'PointField':
+        return filters
+
+    def make_coord_filter(axis_name, lookup_expr, label):
+        def coord_filter_method(queryset, name, value):
+            if value in (None, ''):
+                return queryset
+            annotation_name = f'geom_{axis_name}'
+            value_expr = XCoord('geom') if axis_name == 'x' else YCoord('geom')
+            return queryset.annotate(**{annotation_name: value_expr}).filter(**{f'{annotation_name}__{lookup_expr}': value})
+        return django_filters.NumberFilter(method=coord_filter_method, label=label)
+
+    filters['geom_x_min'] = make_coord_filter('x', 'gte', 'X od')
+    filters['geom_x_max'] = make_coord_filter('x', 'lte', 'X do')
+    filters['geom_y_min'] = make_coord_filter('y', 'gte', 'Y od')
+    filters['geom_y_max'] = make_coord_filter('y', 'lte', 'Y do')
+    filters['geom_missing'] = django_filters.BooleanFilter(
+        field_name='geom',
+        lookup_expr='isnull',
+        label='Brez koordinat',
+    )
     return filters
 
 # List of model classes
@@ -135,6 +178,7 @@ for model in models_list:
 
     # Create filter class
     filter_fields = add_lookup_choice_filters(model, exclude=excluded_filter_fields)
+    filter_fields.update(add_coordinate_filters(model))
     filter_class = type(
         f"{model_name}Filter",
         (django_filters.FilterSet,),
