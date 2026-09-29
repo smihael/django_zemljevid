@@ -5,6 +5,7 @@ import re
 import html as html_module
 import re
 import html as html_module
+import datetime
 from pathlib import Path
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -47,6 +48,32 @@ from .models import (
     ConnectedExternalEntry,
     MemorialImage,
 )
+
+def normalize_export_value(value):
+    """Return Excel/CSV-safe scalar values for export views."""
+    if value is None:
+        return ""
+
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(str(item) for item in value)
+
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, default=str)
+
+    if isinstance(value, datetime.datetime):
+        return value.date().isoformat()
+
+    if isinstance(value, datetime.date):
+        return value.isoformat()
+
+    if hasattr(value, 'tzinfo') and value.tzinfo is not None:
+        try:
+            return value.replace(tzinfo=None)
+        except AttributeError:
+            pass
+
+    return value
+
 
 def html_to_text_preserving_breaks(content: str) -> str:
     """Convert HTML to plain text while preserving logical line breaks.
@@ -492,7 +519,7 @@ class ExportTableCSVView(View):
         def row_generator():
             yield ','.join(field_names) + '\n'
             for obj in queryset.iterator():
-                row = [str(getattr(obj, field, '')) for field in field_names]
+                row = [str(normalize_export_value(getattr(obj, field, ''))) for field in field_names]
                 yield ','.join(row) + '\n'
         response = StreamingHttpResponse(row_generator(), content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{model_name}.csv"'
@@ -527,15 +554,8 @@ class ExportTableXLSXView(View):
             row_values = []
             for field in field_names:
                 value = getattr(obj, field, '')
-                # If field is datetime, show only date in YYYY-MM-DD format
-                import datetime
-                if isinstance(value, datetime.datetime):
-                    value = value.date().isoformat()
-                elif isinstance(value, datetime.date):
-                    value = value.isoformat()
-                # Remove timezone info for datetime/time objects
-                if hasattr(value, 'tzinfo') and value.tzinfo is not None:
-                    value = value.replace(tzinfo=None)
+                value = normalize_export_value(value)
+
                 # Handle HTML fields (TinyMCE) specially: always render links as 'text (url)'
                 if has_tinymce:
                     try:
