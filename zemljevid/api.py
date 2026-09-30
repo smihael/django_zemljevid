@@ -15,7 +15,7 @@ from .models import ConnectedExternalEntry, ExternalProject
 
 models = [
     PartisanMemorial,
-    PartisanHospital,
+    #PartisanHospital,
     PartisanNaming,
     PartisanPointsWithoutMemorial,
     PartisanTrail,
