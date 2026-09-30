@@ -933,6 +933,27 @@ async function loadMarkersForLayer(layer_model_info, markerClusterGroup, cacheMe
     return markerClusterGroup;
 }
 
+const MAP_LAYER_ORDER = [
+    'partisanmemorial',
+    'croatianpartisanmemorial',
+    'partisantrail',
+    'osamosvojitvenaobelezja',
+    'partisanpointswithoutmemorial',
+    'partisannaming',
+    'okupacijskemeje',
+    'othermemorials',
+];
+
+const MAP_LAYER_DISPLAY_NAMES = {
+    partisanmemorial: 'Spomeniki (SLO)',
+    croatianpartisanmemorial: 'Spomeniki (HR)',
+    osamosvojitvenaobelezja: 'Osamosvojitev',
+};
+
+function getLayerDisplayName(layer) {
+    return MAP_LAYER_DISPLAY_NAMES[layer.model_name] || layer.verbose_name_plural;
+}
+
 // Fetch model names and dynamically create marker layers
 async function processGeoLayers() {
     const langMatch = window.location.pathname.match(/^\/([a-z]{2}(?:-[A-Z]{2})?)\//);
@@ -951,11 +972,21 @@ async function processGeoLayers() {
     ]);
 
     const filterContainer = document.getElementById('filter-container');
+    const layerOrder = new Map(MAP_LAYER_ORDER.map((modelName, index) => [modelName, index]));
+    const orderedLayers = layers
+        .map((layer, originalIndex) => ({ layer, originalIndex }))
+        .sort((left, right) => {
+            const leftOrder = layerOrder.get(left.layer.model_name) ?? Number.MAX_SAFE_INTEGER;
+            const rightOrder = layerOrder.get(right.layer.model_name) ?? Number.MAX_SAFE_INTEGER;
+            return leftOrder - rightOrder || left.originalIndex - right.originalIndex;
+        })
+        .map(({ layer }) => layer);
 
-    const loadPromises = layers.map(async layer => {
+    const loadPromises = orderedLayers.map(async layer => {
         let createdLayer;
         const lineLayerModels = new Set(['okupacijskemeje', 'partisantrail']);
         const isLineLayer = lineLayerModels.has(layer.model_name);
+        const displayName = getLayerDisplayName(layer);
 
         if (isLineLayer) {
             // Directly load and add line layer (not clustered)
@@ -965,18 +996,25 @@ async function processGeoLayers() {
             const markerClusterGroup = L.markerClusterGroup({
                 chunkedLoading: true,
                 disableClusteringAtZoom: 12,
-                name: layer.verbose_name_plural,
+                name: displayName,
             });
             createdLayer = await loadMarkersForLayer(layer, markerClusterGroup, cacheMetadata);
             markerClusterGroup.addTo(map);
         }
 
-        geoLayers.push(createdLayer);
+        return { layer, createdLayer, displayName };
+    });
 
-        // Build filter UI
+    const loadedLayers = await Promise.all(loadPromises);
+    geoLayers = loadedLayers.map(({ createdLayer }) => createdLayer);
+
+    // Build filter UI in the configured order, not in request-completion order.
+    for (const { createdLayer, displayName } of loadedLayers) {
         const filterOption = document.createElement('div');
         filterOption.className = 'filter-option';
-        filterOption.innerHTML = `<label>${layer.verbose_name_plural}</label>`;
+        const label = document.createElement('label');
+        label.textContent = displayName;
+        filterOption.appendChild(label);
         filterOption.classList.add('enabled');
         filterOption.title = 'Kliknite za skritje sloja';
 
@@ -993,9 +1031,8 @@ async function processGeoLayers() {
         });
 
         filterContainer.appendChild(filterOption);
-    });
+    }
 
-    await Promise.all(loadPromises);
     updateLayerControl(baseMaps, overlayMaps);
 }
 

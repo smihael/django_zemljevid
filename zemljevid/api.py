@@ -11,7 +11,7 @@ from django.db.models import Count, Max, Q
 from django.utils import translation
 
 from .models import MemorialImage, AbstractGeoEntry
-from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial, OkupacijskeMeje
+from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial, OkupacijskeMeje, OsamosvojitvenaObelezja
 from .models import ConnectedExternalEntry, ExternalProject
 from .external_links import (
     is_wikidata_project,
@@ -21,13 +21,14 @@ from .external_links import (
 
 models = [
     PartisanMemorial,
-    #PartisanHospital,
-    PartisanNaming,
-    PartisanPointsWithoutMemorial,
-    PartisanTrail,
-    OtherMemorials,
     CroatianPartisanMemorial,
+    PartisanTrail,
+    OsamosvojitvenaObelezja,
+    PartisanPointsWithoutMemorial,
+    PartisanNaming,
     OkupacijskeMeje,
+    OtherMemorials,
+    #PartisanHospital,
 ]
 
 from .serializers import FullGeoEntrySerializer

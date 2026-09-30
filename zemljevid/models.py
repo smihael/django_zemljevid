@@ -442,6 +442,19 @@ class OtherMemorials(Memorial):
     def __str__(self):
         return f"Obeležje: {self.name} ({self.pk})"
 
+
+class OsamosvojitvenaObelezja(AbstractPartisanMemorial):
+    """Independent memorial collection for Slovenian independence memorials."""
+
+    icon = 'asterisk-icon'
+
+    class Meta:
+        verbose_name = 'Osamosvojitveno obeležje'
+        verbose_name_plural = 'Osamosvojitvena obeležja'
+
+    def __str__(self):
+        return f"Osamosvojitveno obeležje: {self.name or ''} ({self.pk})"
+
 class OkupacijskeMeje(models.Model):
     """Model for occupancy/occupation borders (Okupacijske meje)."""
     name = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Name'))

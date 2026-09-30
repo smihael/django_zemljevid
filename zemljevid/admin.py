@@ -387,6 +387,12 @@ class CommonGeoAdmin(admin.ModelAdmin):
                 existing_paths.add(candidate_path)
 
 
+class OsamosvojitvenaObelezjaAdmin(CommonGeoAdmin):
+    """Admin prepared for activation once the model table is migrated."""
+
+    change_form_template = 'admin/zemljevid/osamosvojitvenaobelezja/change_form.html'
+
+
 class PartisanNamingAdminForm(MemorialBulkImageUploadAdminForm):
     class Meta(MemorialBulkImageUploadAdminForm.Meta):
         model = PartisanNaming
@@ -437,6 +443,8 @@ for model in [
     AnonymousSubmission
 ]:
     admin.site.register(model, CommonGeoAdmin)
+
+admin.site.register(OsamosvojitvenaObelezja, OsamosvojitvenaObelezjaAdmin)
 
 admin.site.register(PartisanNaming, PartisanNamingAdmin)
 

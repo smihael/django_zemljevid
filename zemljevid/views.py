@@ -9,7 +9,7 @@ import datetime
 from pathlib import Path
 from rest_framework.response import Response
 from rest_framework import viewsets
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.apps import apps
 import csv
 from django.http import StreamingHttpResponse
@@ -46,6 +46,7 @@ from .models import (
     PartisanPointsWithoutMemorial,
     PartisanTrail,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
     ConnectedExternalEntry,
     MemorialImage,
 )
@@ -195,6 +196,7 @@ DETAIL_MODELS = (
     PartisanPointsWithoutMemorial,
     PartisanTrail,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
 )
 
 TRANSLATABLE_MODEL_SLUGS = (
@@ -205,6 +207,7 @@ TRANSLATABLE_MODEL_SLUGS = (
     'partisanpointswithoutmemorial',
     'partisantrail',
     'othermemorials',
+    'osamosvojitvenaobelezja',
 )
 
 
@@ -331,7 +334,24 @@ class MemorialPublicDetailView(View):
         if (model_slug or '').lower() != (canonical_slug or '').lower():
             return redirect('memorial_detail', model_slug=canonical_slug, object_id=object_id)
 
-        obj = get_object_or_404(model, pk=object_id)
+        obj = model.objects.filter(pk=object_id).first()
+        if obj is None and model is OtherMemorials:
+            migrated_obj = OsamosvojitvenaObelezja.objects.filter(
+                remarks__contains=(
+                    'Preneseno iz zbirke Ostalo (OtherMemorials), '
+                    f'prvotni ID: {object_id};'
+                )
+            ).first()
+            if migrated_obj:
+                return redirect(
+                    'memorial_detail',
+                    model_slug=self._model_name_to_slug(OsamosvojitvenaObelezja._meta.model_name),
+                    object_id=migrated_obj.pk,
+                    permanent=True,
+                )
+            raise Http404(f'{model._meta.verbose_name} with ID {object_id} does not exist.')
+        if obj is None:
+            raise Http404(f'{model._meta.verbose_name} with ID {object_id} does not exist.')
 
         display_fields = []
         for field in model._meta.fields:
@@ -368,6 +388,8 @@ class MemorialPublicDetailView(View):
         if obj.geom:
             for nearby_model in DETAIL_MODELS:
                 qs = nearby_model.objects.filter(geom__isnull=False)
+                if nearby_model is PartisanTrail:
+                    qs = qs.defer('last_changed')
                 if hasattr(nearby_model, 'hidden'):
                     qs = qs.filter(hidden=False)
                 if nearby_model == model:

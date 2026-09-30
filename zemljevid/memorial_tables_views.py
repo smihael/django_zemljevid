@@ -3,7 +3,7 @@ import django_filters
 from django_tables2.views import SingleTableMixin
 from django_filters.views import FilterView
 from django.urls import path
-from .models import PartisanMemorial, CroatianPartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail
+from .models import PartisanMemorial, CroatianPartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, OsamosvojitvenaObelezja
 from .tables import (
     PartisanMemorialTable, PartisanMemorialFilter,
     CroatianPartisanMemorialTable, CroatianPartisanMemorialFilter,
@@ -11,6 +11,7 @@ from .tables import (
     PartisanNamingTable, PartisanNamingFilter,
     PartisanPointsWithoutMemorialTable, PartisanPointsWithoutMemorialFilter,
     OtherMemorialsTable, OtherMemorialsFilter,
+    OsamosvojitvenaObelezjaTable, OsamosvojitvenaObelezjaFilter,
     PartisanTrailTable, PartisanTrailFilter,
 )
 
@@ -67,6 +68,12 @@ class OtherMemorialsListView(MemorialTableCountMixin, SingleTableMixin, FilterVi
     template_name = "memorial_table.html"
     filterset_class = OtherMemorialsFilter
 
+class OsamosvojitvenaObelezjaListView(MemorialTableCountMixin, SingleTableMixin, FilterView):
+    table_class = OsamosvojitvenaObelezjaTable
+    model = OsamosvojitvenaObelezja
+    template_name = "memorial_table.html"
+    filterset_class = OsamosvojitvenaObelezjaFilter
+
 class PartisanTrailListView(MemorialTableCountMixin, SingleTableMixin, FilterView):
     table_class = PartisanTrailTable
     model = PartisanTrail
@@ -80,5 +87,6 @@ urlpatterns = [
     path('filter/partisanpointswithoutmemorial/', PartisanPointsWithoutMemorialListView.as_view(), name='partisan_points_table'),
     path('filter/partisantrail/', PartisanTrailListView.as_view(), name='partisan_trail_table'),
     path('filter/othermemorials/', OtherMemorialsListView.as_view(), name='other_memorials_table'),
+    path('filter/osamosvojitvenaobelezja/', OsamosvojitvenaObelezjaListView.as_view(), name='osamosvojitvena_obelezja_table'),
     path('filter/croatianpartisanmemorial/', CroatianPartisanMemorialListView.as_view(), name='croatian_partisan_memorial_table'),
 ]

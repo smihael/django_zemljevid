@@ -14,6 +14,7 @@ from .models import (
     PartisanNaming,
     PartisanPointsWithoutMemorial,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
     PartisanTrail,
     ConnectedExternalEntry,
     ExternalProject,
@@ -142,6 +143,7 @@ models_list = [
     PartisanNaming,
     PartisanPointsWithoutMemorial,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
     PartisanTrail,
 ]
 

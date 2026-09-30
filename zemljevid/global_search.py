@@ -35,6 +35,7 @@ from .models import (
     PartisanNaming,
     PartisanPointsWithoutMemorial,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
     PartisanTrail,
     OkupacijskeMeje,
     ConnectedExternalEntry,
@@ -51,6 +52,7 @@ SEARCH_MODELS = (
     PartisanNaming,
     PartisanPointsWithoutMemorial,
     OtherMemorials,
+    OsamosvojitvenaObelezja,
     PartisanTrail,
     OkupacijskeMeje,
 )
