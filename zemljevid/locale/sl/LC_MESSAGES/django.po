@@ -175,8 +175,8 @@ msgid "Not visited memorials"
 msgstr "Neobiskani spomeniki"
 
 #: models.py:26
-msgid "Destroyed memorials"
-msgstr "Uničeni spomeniki"
+msgid "Removed memorials"
+msgstr "Odstranjeni spomeniki"
 
 #: models.py:27
 msgid "Damaged memorials"

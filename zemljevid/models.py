@@ -23,7 +23,7 @@ class MemorialStatus(models.IntegerChoices):
     NA = 0, _('Not specified')
     EXISTING = 1, _('Existing memorials')
     NOT_VISITED = 3, _('Not visited memorials')
-    DESTROYED = 2, _('Destroyed memorials')
+    REMOVED = 2, _('Removed memorials')
     DAMAGED = 4, _('Damaged memorials')
     MOVED = 5, _('Moved memorials')
     DEPOSITED = 6, _('Deposited memorials')
