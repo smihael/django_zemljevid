@@ -48,6 +48,11 @@ from .models import (
     ConnectedExternalEntry,
     MemorialImage,
 )
+from .external_links import (
+    is_wikidata_project,
+    wikipedia_url_from_title,
+    wikipedia_url_from_wikidata_id,
+)
 
 def normalize_export_value(value):
     """Return Excel/CSV-safe scalar values for export views."""
@@ -407,6 +412,10 @@ class MemorialPublicDetailView(View):
                 'external_id': entry.external_id,
                 'additional_info': entry.additional_info,
                 'url': entry_url,
+                'wikipedia_url': (
+                    wikipedia_url_from_title(entry.additional_info)
+                    or wikipedia_url_from_wikidata_id(entry.external_id)
+                ) if is_wikidata_project(entry.external_project) else '',
             })
 
         context = {

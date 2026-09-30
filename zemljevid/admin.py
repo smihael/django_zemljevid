@@ -23,6 +23,7 @@ from django.db.models import Max
 from django.db import transaction
 
 from zemljevid.models import *
+from zemljevid.external_links import ExternalLinkError, resolve_external_link
 
 from django.utils.translation import gettext_lazy as _
 
@@ -245,10 +246,35 @@ class ConnectedExternalEntryInlineForm(forms.ModelForm):
         queryset=ExternalProject.objects.all(),
         label=_("Connected entry type"),
     )
+    external_id = forms.CharField(
+        required=False,
+        label=_("External ID or URL"),
+        help_text=_("Enter the external ID or paste a URL for the selected project. The ID will be stored automatically."),
+        widget=forms.TextInput(attrs={
+            'placeholder': _('ID or full URL'),
+        }),
+    )
 
     class Meta:
         model = ConnectedExternalEntry
         fields = '__all__'
+
+    def clean_external_id(self):
+        value = self.cleaned_data.get('external_id')
+        project = self.cleaned_data.get('external_project')
+        try:
+            external_id, wikipedia_title = resolve_external_link(project, value)
+            self._wikipedia_title = wikipedia_title
+            return external_id
+        except ExternalLinkError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+
+    def clean(self):
+        cleaned_data = super().clean()
+        wikipedia_title = getattr(self, '_wikipedia_title', None)
+        if wikipedia_title and not cleaned_data.get('additional_info'):
+            cleaned_data['additional_info'] = wikipedia_title
+        return cleaned_data
 
 
 class ConnectedExternalEntryInline(GenericTabularInline):

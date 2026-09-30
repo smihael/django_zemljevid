@@ -121,11 +121,15 @@
                         {% endif %}
                     </li>
                     {% if entry.external_project == 'wikidata-item' or entry.external_project == 'wikidata' %}
-                    {% with qid=entry.external_id|cut:'https://www.wikidata.org/wiki/'|cut:'https://wikidata.org/wiki/'|cut:'http://www.wikidata.org/wiki/'|cut:'http://wikidata.org/wiki/'|cut:'www.wikidata.org/wiki/'|cut:'wikidata.org/wiki/'|cut:'/'|cut:'?'|cut:'#'|upper %}
                     <li>
-                        <a href="https://sl.wikipedia.org/wiki/Special:GoToLinkedPage/slwiki/{{ qid }}" target="_blank" rel="noopener">Wikipedija: slovenska povezava</a>
+                        {% if entry.wikipedia_url %}
+                            <a href="{{ entry.wikipedia_url }}" target="_blank" rel="noopener">
+                                Članek na slovenski Wikipediji{% if entry.additional_info %}: {{ entry.additional_info }}{% endif %}
+                            </a>
+                        {% else %}
+                            <span>Članek na slovenski Wikipediji ni povezan</span>
+                        {% endif %}
                     </li>
-                    {% endwith %}
                     {% endif %}
                     {% endfor %}
                 </ul>

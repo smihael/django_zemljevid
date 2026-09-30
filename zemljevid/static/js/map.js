@@ -467,7 +467,7 @@ function renderConnectedEntries(data) {
             const url = e.external_url || '';
             const additionalInfo = e.additional_info || '';
             const isMisc = e.external_project === 'misc';
-            const wikipediaUrl = buildWikipediaUrlForExternalProject(e.external_project, externalId);
+            const wikipediaUrl = e.wikipedia_url || buildWikipediaUrlForExternalProject(e.external_project, externalId);
 
             const items = [];
             let label;
@@ -487,7 +487,10 @@ function renderConnectedEntries(data) {
             }
 
             if (wikipediaUrl) {
-                items.push(`<li><a href="${wikipediaUrl}" target="_blank" rel="noopener noreferrer">Wikipedija</a></li>`);
+                const wikipediaLabel = additionalInfo
+                    ? `Članek na slovenski Wikipediji: ${additionalInfo}`
+                    : 'Članek na slovenski Wikipediji';
+                items.push(`<li><a href="${wikipediaUrl}" target="_blank" rel="noopener noreferrer">${wikipediaLabel}</a></li>`);
             }
 
             return items;

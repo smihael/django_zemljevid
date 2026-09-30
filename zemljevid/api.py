@@ -12,6 +12,11 @@ from django.utils import translation
 from .models import MemorialImage, AbstractGeoEntry
 from .models import PartisanMemorial, PartisanHospital, PartisanNaming, PartisanPointsWithoutMemorial, OtherMemorials, PartisanTrail, CroatianPartisanMemorial, OkupacijskeMeje
 from .models import ConnectedExternalEntry, ExternalProject
+from .external_links import (
+    is_wikidata_project,
+    wikipedia_url_from_title,
+    wikipedia_url_from_wikidata_id,
+)
 
 models = [
     PartisanMemorial,
@@ -203,9 +208,10 @@ class ConnectedExternalEntrySerializer(serializers.ModelSerializer):
     external_project_name = serializers.CharField(source='external_project.name', read_only=True)
     external_id = serializers.SerializerMethodField()
     external_url = serializers.SerializerMethodField()
+    wikipedia_url = serializers.SerializerMethodField()
     class Meta:
         model = ConnectedExternalEntry
-        fields = ['id', 'external_project', 'external_project_name', 'external_id', 'external_url', 'additional_info']
+        fields = ['id', 'external_project', 'external_project_name', 'external_id', 'external_url', 'wikipedia_url', 'additional_info']
 
     def get_external_id(self, obj):
         project = getattr(obj, 'external_project', None)
@@ -242,6 +248,15 @@ class ConnectedExternalEntrySerializer(serializers.ModelSerializer):
             url = pattern  # pattern without ID
 
         return url
+
+    def get_wikipedia_url(self, obj):
+        project = getattr(obj, 'external_project', None)
+        if not is_wikidata_project(project):
+            return ''
+        return (
+            wikipedia_url_from_title(obj.additional_info)
+            or wikipedia_url_from_wikidata_id(obj.external_id)
+        )
 
 class ConnectedExternalEntryListAPIView(views.APIView):
     """
