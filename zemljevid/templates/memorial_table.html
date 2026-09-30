@@ -207,6 +207,12 @@
   </div>
   {% endif %}
 
+  <div class="row justify-content-center mb-2">
+    <div class="col-md-10 text-muted small text-end">
+      Število zadetkov: <strong>{{ match_count|default:0 }}</strong>
+    </div>
+  </div>
+
   {% if request.GET.geom_missing == 'true' %}
     <div class="row justify-content-center">
       <div class="col-md-10">
