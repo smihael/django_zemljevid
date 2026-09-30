@@ -77,6 +77,10 @@ msgstr "Za način točnega datuma navedite datum posnetka."
 msgid "Please provide approximate date text."
 msgstr "Navedite približni datum."
 
+#: models.py:225
+msgid "Coordinates are required for new memorials."
+msgstr "Koordinate so obvezne pri novih spomenikih."
+
 #: admin.py:222
 msgid "Move"
 msgstr "Vrstni red"

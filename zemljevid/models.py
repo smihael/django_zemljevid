@@ -13,6 +13,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
+from django.urls import NoReverseMatch, reverse
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _, gettext_noop, get_language
@@ -197,6 +198,15 @@ class AbstractGeoEntry(models.Model):
             'description': _('Images are not allowed in Description. Upload images via gallery.')
         })
 
+    def get_admin_url(self):
+        if not self.pk:
+            return ''
+
+        try:
+            return reverse(f'admin:{self._meta.app_label}_{self._meta.model_name}_change', args=[self.pk])
+        except NoReverseMatch:
+            return ''
+
     class Meta:
         abstract = True
         managed = False
@@ -205,6 +215,15 @@ class Memorial(AbstractGeoEntry):
     """
     Model for memorials with a gallery field.
     """
+
+    def clean(self):
+        super().clean()
+        if self.pk or self.geom:
+            return
+
+        raise ValidationError({
+            'geom': _('Coordinates are required for new memorials.')
+        })
     
     memorial_access = django_models.TextField(null=True, blank=True, verbose_name=_('Location and access'),
                                           help_text=_('Enter information about access to the memorial'), db_collation='slovenian_icu')
