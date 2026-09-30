@@ -413,6 +413,7 @@ class PartisanTrail(models.Model):
     entry_author = django_models.TextField(max_length=255, blank=True, null=True, verbose_name=_('Entry author'),
                                            help_text=_('Enter the names of the authors/reporters.'))
     entry_date = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name=_('Entry date'))
+    last_changed = models.DateTimeField(auto_now=True, null=True, blank=True, verbose_name=_('Last changed'))
 
     hidden = django_models.BooleanField(default=False, verbose_name=_('Hidden (will not be displayed on the map)'),
                                         help_text=_('If checked, the trail will not be displayed on the map, but will still be saved in the database and can be edited'))
@@ -446,6 +447,7 @@ class OkupacijskeMeje(models.Model):
     name = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Name'))
     description = django_models.TextField(blank=True, null=True, verbose_name=_('Description'))
     geom = models.MultiLineStringField(blank=True, null=True, verbose_name=_('Border geometry'))
+    last_changed = django_models.DateTimeField(auto_now=True, null=True, blank=True, verbose_name=_('Last changed'))
     source = django_models.CharField(max_length=255, blank=True, null=True, verbose_name=_('Source'))
     color = ColorField(default='#FF0000', blank=True, null=True, verbose_name=_('Color'), help_text=_('Color used to style this border on the map.'))
     hidden = django_models.BooleanField(default=False, verbose_name=_('Hidden (will not be displayed on the map)'))

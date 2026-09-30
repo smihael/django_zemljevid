@@ -28,6 +28,157 @@ const fetchWithTimeout = async (url, timeout = 5000) => {
     }
 };
 
+const BRIEF_CACHE_DB = 'map-brief-geojson';
+const BRIEF_CACHE_STORE = 'layers';
+const BRIEF_CACHE_TTL_MS = 60 * 60 * 1000;
+const GEO_LAYERS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const mapScriptElement = document.currentScript || document.querySelector('script[src*="/js/map"]');
+const mapScriptVersion = (() => {
+    if (!mapScriptElement?.src) return 'map.js';
+    const scriptUrl = new URL(mapScriptElement.src, window.location.href);
+    return `${scriptUrl.pathname}?v=${scriptUrl.searchParams.get('v') || ''}`;
+})();
+
+function openBriefGeoJsonCache() {
+    if (!window.indexedDB) return Promise.reject(new Error('IndexedDB is unavailable'));
+
+    return new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(BRIEF_CACHE_DB, 1);
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(BRIEF_CACHE_STORE)) {
+                database.createObjectStore(BRIEF_CACHE_STORE, { keyPath: 'model_name' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Unable to open IndexedDB'));
+        request.onblocked = () => reject(new Error('Opening the IndexedDB cache was blocked'));
+    });
+}
+
+async function readBriefGeoJsonCache(modelName) {
+    const database = await openBriefGeoJsonCache();
+    try {
+        return await new Promise((resolve, reject) => {
+            const transaction = database.transaction(BRIEF_CACHE_STORE, 'readonly');
+            const request = transaction.objectStore(BRIEF_CACHE_STORE).get(modelName);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error || new Error('Unable to read IndexedDB cache'));
+        });
+    } finally {
+        database.close();
+    }
+}
+
+async function writeBriefGeoJsonCache(entry) {
+    const database = await openBriefGeoJsonCache();
+    try {
+        await new Promise((resolve, reject) => {
+            const transaction = database.transaction(BRIEF_CACHE_STORE, 'readwrite');
+            transaction.objectStore(BRIEF_CACHE_STORE).put(entry);
+            transaction.oncomplete = resolve;
+            transaction.onerror = () => reject(transaction.error || new Error('Unable to write IndexedDB cache'));
+            transaction.onabort = () => reject(transaction.error || new Error('IndexedDB cache write was aborted'));
+        });
+    } finally {
+        database.close();
+    }
+}
+
+function briefCacheValidatorMatches(cachedValidator, currentValidator) {
+    return Boolean(
+        cachedValidator && currentValidator &&
+        cachedValidator.count === currentValidator.count &&
+        cachedValidator.last_changed === currentValidator.last_changed
+    );
+}
+
+function isBriefGeoJson(data) {
+    return data && data.type === 'FeatureCollection' && Array.isArray(data.features);
+}
+
+async function getBriefGeoJson(layer, cacheMetadata) {
+    const modelName = layer.model_name;
+    const currentValidator = cacheMetadata?.layers?.[modelName];
+
+    if (currentValidator) {
+        try {
+            const cached = await readBriefGeoJsonCache(modelName);
+            const age = cached ? Date.now() - cached.cached_at : Infinity;
+            if (
+                cached && cached.script_version === mapScriptVersion &&
+                age >= 0 && age < BRIEF_CACHE_TTL_MS &&
+                briefCacheValidatorMatches(cached.validator, currentValidator) &&
+                isBriefGeoJson(cached.geojson)
+            ) {
+                return cached.geojson;
+            }
+        } catch (error) {
+            console.warn('Unable to read map data cache; loading from API instead.', error);
+        }
+    }
+
+    const response = await fetchWithTimeout(`/api/brief/${modelName}/`);
+    if (!response.ok) throw new Error(`Brief map API returned ${response.status} for ${modelName}`);
+    const geojson = await response.json();
+    if (!isBriefGeoJson(geojson)) throw new Error(`Invalid GeoJSON response for ${modelName}`);
+
+    if (currentValidator) {
+        try {
+            await writeBriefGeoJsonCache({
+                model_name: modelName,
+                script_version: mapScriptVersion,
+                validator: currentValidator,
+                cached_at: Date.now(),
+                geojson,
+            });
+        } catch (error) {
+            console.warn('Unable to save map data cache; continuing without it.', error);
+        }
+    }
+
+    return geojson;
+}
+
+async function getGeoLayers(langCode) {
+    const language = langCode || document.documentElement.lang || 'default';
+    const cacheKey = `map-layers-v1:${mapScriptVersion}:${language}`;
+    let cached = null;
+
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(cacheKey) || 'null');
+        if (parsed && Array.isArray(parsed.layers) && Number.isFinite(parsed.cached_at)) cached = parsed;
+        const age = cached ? Date.now() - cached.cached_at : Infinity;
+        if (cached && age >= 0 && age < GEO_LAYERS_CACHE_TTL_MS) {
+            return cached.layers;
+        }
+    } catch (error) {
+        console.warn('Unable to read map layer metadata cache.', error);
+    }
+
+    const layersUrl = langCode
+        ? `/api/get_layers/?lang=${encodeURIComponent(langCode)}`
+        : '/api/get_layers/';
+    try {
+        const response = await fetchWithTimeout(layersUrl);
+        if (!response.ok) throw new Error(`Layer API returned ${response.status}`);
+        const layers = await response.json();
+        if (!Array.isArray(layers)) throw new Error('Invalid layer metadata response');
+        try {
+            window.localStorage.setItem(cacheKey, JSON.stringify({ cached_at: Date.now(), layers }));
+        } catch (error) {
+            console.warn('Unable to save map layer metadata cache.', error);
+        }
+        return layers;
+    } catch (error) {
+        if (cached) {
+            console.warn('Using previously cached layer metadata because the API is unavailable.', error);
+            return cached.layers;
+        }
+        throw error;
+    }
+}
+
 // Initialize the map
 var map = L.map('map', {
     center: [defaultLat, defaultLng],
@@ -591,13 +742,11 @@ map.on('zoomend', () => {
 });
 
 // Fetch and render markers or line features for the layer. Returns the Leaflet layer added.
-async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
+async function loadMarkersForLayer(layer_model_info, markerClusterGroup, cacheMetadata) {
     showLoadingCircle();
-    const markersUrl = `/api/brief/${layer_model_info.model_name}/`;
     let geojson;
     try {
-        const response = await fetchWithTimeout(markersUrl);
-        geojson = await response.json();
+        geojson = await getBriefGeoJson(layer_model_info, cacheMetadata);
     } finally {
         hideLoadingCircle();
     }
@@ -688,9 +837,18 @@ async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
 async function processGeoLayers() {
     const langMatch = window.location.pathname.match(/^\/([a-z]{2}(?:-[A-Z]{2})?)\//);
     const langCode = langMatch ? langMatch[1] : '';
-    const layersApiUrl = langCode ? `/api/get_layers/?lang=${encodeURIComponent(langCode)}` : '/api/get_layers/';
-    const response = await fetch(layersApiUrl);
-    const layers = await response.json();
+    const [layers, cacheMetadata] = await Promise.all([
+        getGeoLayers(langCode),
+        fetchWithTimeout('/api/cache_metadata/')
+            .then(response => {
+                if (!response.ok) throw new Error(`Cache metadata API returned ${response.status}`);
+                return response.json();
+            })
+            .catch(error => {
+                console.warn('Map cache validation is unavailable; loading brief data directly.', error);
+                return null;
+            }),
+    ]);
 
     const filterContainer = document.getElementById('filter-container');
 
@@ -701,7 +859,7 @@ async function processGeoLayers() {
 
         if (isLineLayer) {
             // Directly load and add line layer (not clustered)
-            createdLayer = await loadMarkersForLayer(layer, null);
+            createdLayer = await loadMarkersForLayer(layer, null, cacheMetadata);
             createdLayer.addTo(map);
         } else {
             const markerClusterGroup = L.markerClusterGroup({
@@ -709,7 +867,7 @@ async function processGeoLayers() {
                 disableClusteringAtZoom: 12,
                 name: layer.verbose_name_plural,
             });
-            createdLayer = await loadMarkersForLayer(layer, markerClusterGroup);
+            createdLayer = await loadMarkersForLayer(layer, markerClusterGroup, cacheMetadata);
             markerClusterGroup.addTo(map);
         }
 

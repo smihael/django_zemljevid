@@ -6,7 +6,8 @@ from django.apps import apps
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection
+from django.db import ProgrammingError, connection
+from django.db.models import Count, Max, Q
 from django.utils import translation
 
 from .models import MemorialImage, AbstractGeoEntry
@@ -166,6 +167,41 @@ class GeoLayerListView(views.APIView):
         serializer = GeoLayersSerializer(model_descriptions, many=True)
         return response.Response(serializer.data)
 
+
+class BriefCacheMetadataAPIView(views.APIView):
+    """Return compact per-layer revisions for validating cached brief GeoJSON."""
+
+    def get(self, request):
+        layer_metadata = {}
+        for model in models:
+            queryset = model.objects.filter(geom__isnull=False)
+            model_name = model._meta.model_name
+
+            # Keep this filter in sync with BriefGeoEntryViewSet.list().
+            if model_name != 'okupacijskemeje':
+                queryset = queryset.filter(Q(hidden=False) | Q(hidden__isnull=True))
+
+            try:
+                aggregate = queryset.aggregate(
+                    feature_count=Count('pk'),
+                    latest_change=Max('last_changed'),
+                )
+                latest_change = aggregate['latest_change']
+            except ProgrammingError:
+                # Existing deployments may serve requests before migration 0048
+                # adds last_changed to the line-layer tables. Counts still detect
+                # additions/removals; the browser TTL covers edits until migrated.
+                aggregate = queryset.aggregate(feature_count=Count('pk'))
+                latest_change = None
+            layer_metadata[model_name] = {
+                'count': aggregate['feature_count'],
+                'last_changed': latest_change.isoformat() if latest_change else None,
+            }
+
+        result = response.Response({'layers': layer_metadata})
+        result['Cache-Control'] = 'no-store'
+        return result
+
 class GetImagesAPIView(views.APIView):
     def get(self, request, *args, **kwargs):
         model_name = request.query_params.get('model_name')
@@ -286,5 +322,6 @@ urlpatterns = router.urls
 urlpatterns += [
     path('get_images/', GetImagesAPIView.as_view(), name='get_images'),
     path('get_layers/', GeoLayerListView.as_view(), name='get_layers'),
+    path('cache_metadata/', BriefCacheMetadataAPIView.as_view(), name='cache_metadata'),
     path('get_connected_external_entries/', ConnectedExternalEntryListAPIView.as_view(), name='get_connected_external_entries'),
 ]
