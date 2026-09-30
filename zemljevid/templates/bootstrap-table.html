@@ -63,9 +63,10 @@
     {% endblock table %}
 
     {% block pagination %}
-        {% if table.page and table.paginator.num_pages > 1 %}
-        <nav aria-label="Table navigation">
-            <ul class="pagination justify-content-center">
+    <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 mt-3 table-pagination-footer">
+        <nav aria-label="{% trans 'Table navigation' %}">
+            <ul class="pagination justify-content-center mb-0">
+            {% if table.page and table.paginator.num_pages > 1 %}
             {% if table.page.has_previous %}
                 {% block pagination.previous %}
                 <li class="previous page-item">
@@ -97,9 +98,13 @@
                 </li>
                 {% endblock pagination.next %}
             {% endif %}
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link">{% trans 'Results' %}: {{ table.paginator.count }}</span>
+            </li>
             </ul>
         </nav>
-        {% endif %}
+    </div>
     {% endblock pagination %}
 </div>
 {% endblock table-wrapper %}

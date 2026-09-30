@@ -736,6 +736,156 @@ msgstr "prispevajte_spomenik/"
 msgid "statistika/"
 msgstr ""
 
+msgid "contains"
+msgstr "vsebuje"
+
+msgid "matches exactly"
+msgstr "se ujema popolnoma"
+
+msgid "starts with"
+msgstr "začne se z"
+
+msgid "ends with"
+msgstr "konča se z"
+
+msgid "X from"
+msgstr "X od"
+
+msgid "X to"
+msgstr "X do"
+
+msgid "Y from"
+msgstr "Y od"
+
+msgid "Y to"
+msgstr "Y do"
+
+msgid "Without coordinates"
+msgstr "Brez koordinat"
+
+msgid "All projects"
+msgstr "Vse zbirke"
+
+msgid "External links"
+msgstr "Zunanje povezave"
+
+msgid "Has external links"
+msgstr "Ima zunanje povezave"
+
+msgid "No external links"
+msgstr "Brez zunanjih povezav"
+
+msgid "All"
+msgstr "Vse"
+
+msgid "Has images"
+msgstr "Ima slike"
+
+msgid "No images"
+msgstr "Brez slik"
+
+msgid "Images"
+msgstr "Slike"
+
+msgid "Memorial table"
+msgstr "Tabela spomenikov"
+
+msgid "Only records without coordinates are shown."
+msgstr "Prikazani so samo zapisi brez koordinat."
+
+msgid "Search within area"
+msgstr "Išči znotraj območja"
+
+msgid "Use map area"
+msgstr "Uporabi območje na zemljevidu"
+
+msgid "from"
+msgstr "od"
+
+msgid "to"
+msgstr "do"
+
+msgid "Links and images"
+msgstr "Povezave in slike"
+
+msgid "Show more filters"
+msgstr "Prikaži več filtrov"
+
+msgid "Show fewer filters"
+msgstr "Prikaži manj filtrov"
+
+msgid "Clear filters"
+msgstr "Počisti filtre"
+
+msgid "Filter"
+msgstr "Filtriraj"
+
+msgid "Results"
+msgstr "Število zadetkov"
+
+msgid "No records without coordinates."
+msgstr "Ni zapisov brez koordinat."
+
+msgid "Table navigation"
+msgstr "Krmarjenje po tabeli"
+
+msgid "Global search"
+msgstr "Globalno iskanje"
+
+msgid "Global search across all fields"
+msgstr "Globalno iskanje po vseh poljih"
+
+msgid "Search all records"
+msgstr "Išči po vseh zapisih"
+
+msgid "Enter a word or part of a word"
+msgstr "Vnesi besedo ali njen del"
+
+msgid "Search"
+msgstr "Išči"
+
+msgid "Partial words supported; minimum 3 characters."
+msgstr "Delne besede; najmanj 3 znaki."
+
+msgid "Enter at least 3 characters to search."
+msgstr "Za iskanje vnesi vsaj 3 znake."
+
+msgid "Page %(current)s"
+msgstr "Stran %(current)s"
+
+msgid "Results on this page"
+msgstr "Zadetki na tej strani"
+
+msgid "Actions"
+msgstr "Orodja"
+
+msgid "Match"
+msgstr "Ujemanje"
+
+msgid "Open details"
+msgstr "Odpri podrobnosti"
+
+msgid "Show on map"
+msgstr "Pokaži na zemljevidu"
+
+msgid "Search results pages"
+msgstr "Strani rezultatov iskanja"
+
+msgid "Previous"
+msgstr "Prejšnja"
+
+msgid "Next"
+msgstr "Naslednja"
+
+msgid "No matching records found."
+msgstr "Ni zapisov, ki bi ustrezali iskanju."
+
+msgid "Search by names, descriptions, or any other record field."
+msgstr "Išči po imenih, opisih ali drugih poljih zapisov."
+
+msgid "global-search/"
+msgstr "globalno-iskanje/"
+
 #~ msgid "Monument"
 #~ msgstr "Spomenik"
 

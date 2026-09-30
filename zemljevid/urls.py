@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth import views as auth_views
 from .views import ExportTableCSVView, ExportTableView, ExportTableXLSXView, MemorialPublicDetailView, StatisticsView, missing_memorial_view
+from .global_search import GlobalSearchView
 
 
 
@@ -43,6 +44,11 @@ urlpatterns = [
         _('statistika/'),
         StatisticsView.as_view(),
         name='statistika'
+    ),
+    path(
+        _('global-search/'),
+        GlobalSearchView.as_view(),
+        name='global_search',
     ),
     ]
 

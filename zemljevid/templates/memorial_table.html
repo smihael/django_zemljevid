@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load render_table from django_tables2 %}
+{% load i18n %}
 {% load widget_tweaks %}
 {% load leaflet_tags %}
 
@@ -61,6 +62,26 @@
   margin-bottom: 1rem;
 }
 
+.relation-filter-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.relation-filter-card .form-row {
+  margin-bottom: 0.55rem;
+}
+
+.relation-filter-card .form-row:last-child {
+  margin-bottom: 0;
+}
+
+.table-pagination-footer .pagination {
+  margin-bottom: 0;
+}
+
 .coordinate-filter-card .coord-actions {
   display: flex;
   gap: 0.5rem;
@@ -113,64 +134,20 @@
 {% block content %}
 <div id="page-content-wrapper-wide">
 <div class="container-fluid mt-4">
-  <h2 class="mb-4">Memorial Table</h2>
+  <h2 class="mb-4">{% trans "Memorial table" %}</h2>
 
   {% if filter %}
   <div class="row justify-content-center">
     <div class="col-md-8">
       {% if request.GET.geom_missing == 'true' %}
       <div class="alert alert-warning py-2 px-3 mb-3">
-        Prikazani so samo zapisi brez koordinat.
+        {% trans "Only records without coordinates are shown." %}
       </div>
       {% endif %}
       <form method="get" class="mb-3 p-3 border rounded bg-light">
-        {% if filter.form.geom_x_min or filter.form.geom_x_max or filter.form.geom_y_min or filter.form.geom_y_max or filter.form.geom_missing %}
-        <div class="coordinate-filter-card">
-          <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-            <strong>Koordinate</strong>
-            <div class="coord-actions">
-              <button type="button" class="btn btn-outline-secondary btn-sm" id="use-map-bounds">
-                Uporabi območje na zemljevidu
-              </button>
-            </div>
-          </div>
-
-          <div class="coord-grid">
-            <div class="coord-axis" id="coord-axis-x">
-              <div class="small text-muted mb-2">X</div>
-              <div class="coord-range">
-                <div>
-                  <label class="form-label small mb-1">od</label>
-                  {{ filter.form.geom_x_min|add_class:"form-control form-control-sm" }}
-                </div>
-                <div>
-                  <label class="form-label small mb-1">do</label>
-                  {{ filter.form.geom_x_max|add_class:"form-control form-control-sm" }}
-                </div>
-              </div>
-            </div>
-
-            <div class="coord-axis" id="coord-axis-y">
-              <div class="small text-muted mb-2">Y</div>
-              <div class="coord-range">
-                <div>
-                  <label class="form-label small mb-1">od</label>
-                  {{ filter.form.geom_y_min|add_class:"form-control form-control-sm" }}
-                </div>
-                <div>
-                  <label class="form-label small mb-1">do</label>
-                  {{ filter.form.geom_y_max|add_class:"form-control form-control-sm" }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-        {% endif %}
-
         {% for field in filter.form.visible_fields %}
-          {% if field.name == 'geom_x_min' or field.name == 'geom_x_max' or field.name == 'geom_y_min' or field.name == 'geom_y_max' or field.name == 'geom_missing' %}
-            {# handled in the coordinate block above #}
+          {% if field.name == 'geom_x_min' or field.name == 'geom_x_max' or field.name == 'geom_y_min' or field.name == 'geom_y_max' or field.name == 'geom_missing' or field.name == 'external_project' or field.name == 'has_external_links' or field.name == 'has_images' %}
+            {# handled in dedicated filter blocks below #}
           {% else %}
           <div class="form-row filter-field{% if forloop.counter > 4 %} d-none extra-filter{% endif %}">
             <label class="form-label small"><i>{{ field.label }}</i></label>
@@ -182,20 +159,90 @@
           </div>
           {% endif %}
         {% endfor %}
+
+        {% if filter.form.geom_x_min or filter.form.geom_x_max or filter.form.geom_y_min or filter.form.geom_y_max or filter.form.geom_missing %}
+        <div class="coordinate-filter-card d-none extra-filter">
+          <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+            <strong>{% trans "Search within area" %}</strong>
+            <div class="coord-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="use-map-bounds">
+                {% trans "Use map area" %}
+              </button>
+            </div>
+          </div>
+
+          <div class="coord-grid">
+            <div class="coord-axis" id="coord-axis-x">
+              <div class="small text-muted mb-2">X</div>
+              <div class="coord-range">
+                <div>
+                  <label class="form-label small mb-1">{% trans "from" %}</label>
+                  {{ filter.form.geom_x_min|add_class:"form-control form-control-sm" }}
+                </div>
+                <div>
+                  <label class="form-label small mb-1">{% trans "to" %}</label>
+                  {{ filter.form.geom_x_max|add_class:"form-control form-control-sm" }}
+                </div>
+              </div>
+            </div>
+
+            <div class="coord-axis" id="coord-axis-y">
+              <div class="small text-muted mb-2">Y</div>
+              <div class="coord-range">
+                <div>
+                  <label class="form-label small mb-1">{% trans "from" %}</label>
+                  {{ filter.form.geom_y_min|add_class:"form-control form-control-sm" }}
+                </div>
+                <div>
+                  <label class="form-label small mb-1">{% trans "to" %}</label>
+                  {{ filter.form.geom_y_max|add_class:"form-control form-control-sm" }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        {% endif %}
+
+        {% if filter.form.external_project or filter.form.has_external_links or filter.form.has_images %}
+        <div class="relation-filter-card d-none extra-filter">
+          <strong class="d-block mb-2">{% trans "Links and images" %}</strong>
+          {% if filter.form.external_project %}
+          <div class="form-row filter-field">
+            <label class="form-label small"><i>{{ filter.form.external_project.label }}</i></label>
+            {{ filter.form.external_project|add_class:"form-control form-control-sm" }}
+          </div>
+          {% endif %}
+          {% if filter.form.has_external_links %}
+          <div class="form-row filter-field">
+            <label class="form-label small"><i>{{ filter.form.has_external_links.label }}</i></label>
+            {{ filter.form.has_external_links|add_class:"form-control form-control-sm" }}
+          </div>
+          {% endif %}
+          {% if filter.form.has_images %}
+          <div class="form-row filter-field">
+            <label class="form-label small"><i>{{ filter.form.has_images.label }}</i></label>
+            {{ filter.form.has_images|add_class:"form-control form-control-sm" }}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
         
         <div class="d-flex justify-content-between mt-3 align-items-center">
           <div>
             <button type="button" class="btn btn-link btn-sm px-0 me-3" id="toggle-filters">
-              <span id="toggle-filters-text">Show more filters</span>
+                <span id="toggle-filters-text"
+                  data-more-label="{% trans 'Show more filters' %}"
+                  data-less-label="{% trans 'Show fewer filters' %}">{% trans "Show more filters" %}</span>
               <i class="bi bi-chevron-down" id="toggle-filters-icon"></i>
             </button>
           </div>
           <div>
             <a href="?" class="btn btn-link btn-sm text-decoration-none text-danger fw-bold">
-              <i class="bi bi-x-circle"></i> Clear filters
+              <i class="bi bi-x-circle"></i> {% trans "Clear filters" %}
             </a>
             <button type="submit" class="btn btn-primary btn-sm me-2">
-              <i class="bi bi-funnel"></i> Filter
+              <i class="bi bi-funnel"></i> {% trans "Filter" %}
             </button>
           </div>
         </div>
@@ -207,13 +254,12 @@
   </div>
   {% endif %}
 
-  <div class="row justify-content-center mb-2">
-    <div class="col-md-10 text-muted small text-end">
-      Število zadetkov: <strong>{{ match_count|default:0 }}</strong>
-    </div>
-  </div>
-
   {% if request.GET.geom_missing == 'true' %}
+    <div class="row justify-content-center mb-2">
+      <div class="col-md-10 text-muted small text-end">
+        {% trans "Results" %}: <strong>{{ match_count|default:0 }}</strong>
+      </div>
+    </div>
     <div class="row justify-content-center">
       <div class="col-md-10">
         <table class="table table-sm table-striped align-middle">
@@ -237,7 +283,7 @@
             </tr>
             {% empty %}
             <tr>
-              <td colspan="3" class="text-muted">Ni zapisov brez koordinat.</td>
+              <td colspan="3" class="text-muted">{% trans "No records without coordinates." %}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -398,21 +444,29 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       dateFormat: 'Y-m-d H:i'
     });
 
-    // Fix: Toggle extra filters (works after page load)
+    var extra = $('.extra-filter');
+    var text = $('#toggle-filters-text');
+    var icon = $('#toggle-filters-icon');
+
+    function setExtraFiltersVisible(visible) {
+      extra.toggleClass('d-none', !visible);
+      text.text(visible ? text.attr('data-less-label') : text.attr('data-more-label'));
+      icon.toggleClass('bi-chevron-up', visible).toggleClass('bi-chevron-down', !visible);
+    }
+
+    var hasActiveExtraFilter = extra.find('input, select').toArray().some(function(field) {
+      if (field.type === 'checkbox' || field.type === 'radio') {
+        return field.checked;
+      }
+      return field.value !== '';
+    });
+    if (hasActiveExtraFilter) {
+      setExtraFiltersVisible(true);
+    }
+
     $('#toggle-filters').on('click', function(e) {
       e.preventDefault();
-      var extra = $('.extra-filter');
-      var text = $('#toggle-filters-text');
-      var icon = $('#toggle-filters-icon');
-      var shown = extra.first().is(':visible');
-      extra.toggleClass('d-none');
-      if (shown) {
-        text.text('Show more filters');
-        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
-      } else {
-        text.text('Show fewer filters');
-        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
-      }
+      setExtraFiltersVisible(extra.first().is(':hidden'));
     });
   });
 </script>

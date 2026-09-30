@@ -743,15 +743,42 @@ async function processGeoLayers() {
 
 // Call the function to fetch model names and initialize layers
 let geoLayers = [];
+
+function normalizeSidebarSearchText(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
+        .replace(/[-‐‑‒–—―−]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function filterSidebarSearchData(query, records) {
+    const normalizedQuery = normalizeSidebarSearchText(query);
+    if (!normalizedQuery) return {};
+
+    const matches = {};
+    for (const [name, record] of Object.entries(records)) {
+        if (normalizeSidebarSearchText(name).includes(normalizedQuery)) {
+            matches[name] = record;
+        }
+    }
+    return matches;
+}
+
 processGeoLayers().then(() => {
     L.control.search({
         layer: L.layerGroup(geoLayers),
         initial: false,
+        casesensitive: false,
         collapsed: false,
         container: 'searchbox',
         zoom: 17,
         position: 'topright',
         propertyName: 'name',
+        filterData: filterSidebarSearchData,
         buildTip: function(text, val) {
             var type = val.layer.feature?.properties?.amenity || '';
             return '<a href="#" class="'+type+'">'+text+'<b>'+type+'</b></a>';
