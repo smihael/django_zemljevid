@@ -301,6 +301,7 @@ osmLayer.on('tileerror', function() {
 var wmsUrl = 'https://ipi.eprostor.gov.si/wms-si-gurs-dts/wms?';
 //'https://ipi.eprostor.gov.si/gwc-si-gurs-dts/service/wms?'
 var wmsInsUrl = 'https://ipi.eprostor.gov.si/wms-si-gurs-ins/wms?';
+var rpeWmsUrl = 'https://ipi.eprostor.gov.si/wms-si-gurs-rpe/ows?';
 
 const dpk250 = L.tileLayer.wms(wmsUrl, {
   layers: 'SI.GURS.DK:DPK250',
@@ -369,13 +370,39 @@ const cadastralParcelsOverview = L.tileLayer.wms(wmsInsUrl, {
 
 const cadastralZoningOverview = L.tileLayer.wms(wmsInsUrl, {
     layers: 'cp:CP.CadastralZoning',
-    styles: 'CP.CadastralZoning.Default',
+    styles: 'inspire_common:DEFAULT',
     format: 'image/png',
     transparent: true,
+    opacity: 0.45,
     version: '1.3.0',
     crs: L.CRS.EPSG3857,
     attribution: '© GURS'
 });
+
+const localCommunityBoundaries = L.tileLayer.wms(rpeWmsUrl, {
+    layers: 'SI.GURS.RPE:KRAJEVNE_SKUPNOSTI',
+    styles: 'nep_rpe_kraj_skup',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    crs: L.CRS.EPSG3857,
+    attribution: '© GURS — Register prostorskih enot'
+});
+
+const localCommunityLabels = L.tileLayer.wms(rpeWmsUrl, {
+    layers: 'SI.GURS.RPE:KRAJEVNE_SKUPNOSTI',
+    styles: 'nep_rpe_kraj_skup_lbl',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    crs: L.CRS.EPSG3857,
+    attribution: '© GURS — Register prostorskih enot'
+});
+
+const localCommunitiesOverview = L.layerGroup([
+    localCommunityBoundaries,
+    localCommunityLabels
+]);
 
 const geographicalNamesOverview = L.tileLayer.wms(wmsInsUrl, {
     layers: 'gn:GN.GeographicalNames',
@@ -394,7 +421,8 @@ var overlayMaps = {
     "GURS Orthophoto": orthophotoLayer,
     "GURS Lidar": lidar,
     "GURS Katastrske parcele": cadastralParcelsOverview,
-    //"GURS Katastrska obmocja": cadastralZoningOverview,
+    "GURS Katastrske občine": cadastralZoningOverview,
+    "GURS Krajevne skupnosti": localCommunitiesOverview,
     "Register zemljepisnih imen": geographicalNamesOverview,
     //"GURS Topografska karta (1:50), na voljo samo pri primerni povečavi": gursWmsLayer,
     //'GURS DPK 1:500': dpk500,
@@ -441,6 +469,78 @@ function updateLayerControl(baseMaps, overlayMaps) {
 
 // Update the call to L.control.layers
 updateLayerControl(baseMaps, overlayMaps);
+
+function addWmsFeatureInfoRequest(layer, serviceUrl, point) {
+    const bounds = map.getBounds();
+    const size = map.getSize();
+    const southWest = map.options.crs.project(bounds.getSouthWest());
+    const northEast = map.options.crs.project(bounds.getNorthEast());
+    const params = new URLSearchParams({
+        service: 'WMS',
+        version: '1.3.0',
+        request: 'GetFeatureInfo',
+        layers: layer.wmsParams.layers,
+        query_layers: layer.wmsParams.layers,
+        styles: layer.wmsParams.styles || '',
+        crs: 'EPSG:3857',
+        bbox: [southWest.x, southWest.y, northEast.x, northEast.y].join(','),
+        width: String(size.x),
+        height: String(size.y),
+        i: String(Math.round(point.x)),
+        j: String(Math.round(point.y)),
+        info_format: 'application/json',
+        feature_count: '5'
+    });
+
+    return fetchWithTimeout(`${serviceUrl}${params.toString()}`);
+}
+
+function showWmsFeatureInfo(properties, point, fallbackName) {
+    if (!properties || typeof properties !== 'object') return;
+
+    const normalizedProperties = Object.entries(properties).filter(([, value]) =>
+        value !== null && value !== undefined && String(value).trim() !== ''
+    );
+    const getKeyValue = (predicate) => normalizedProperties.find(([key]) => predicate(key.toLowerCase().replace(/[^a-z0-9]/g, '')))?.[1];
+    const name = getFeatureDisplayName(properties, String(getKeyValue((key) => key.includes('ime') || key.includes('name') || key.includes('naziv')) || fallbackName));
+    const code = getKeyValue((key) => key.includes('sifra') || key.includes('code') || key === 'id');
+    const content = L.DomUtil.create('div');
+    const title = L.DomUtil.create('strong', '', content);
+    title.textContent = name;
+
+    if (code !== undefined) {
+        const codeLine = L.DomUtil.create('div', '', content);
+        codeLine.textContent = `Šifra: ${code}`;
+    }
+
+    L.popup().setLatLng(point).setContent(content).openOn(map);
+}
+
+map.on('click', async function(event) {
+    const queryLayers = [];
+    if (map.hasLayer(localCommunitiesOverview)) {
+        queryLayers.push({ layer: localCommunityBoundaries, serviceUrl: rpeWmsUrl, name: 'Krajevna skupnost' });
+    }
+    if (map.hasLayer(cadastralZoningOverview)) {
+        queryLayers.push({ layer: cadastralZoningOverview, serviceUrl: wmsInsUrl, name: 'Katastrska občina' });
+    }
+    if (queryLayers.length === 0) return;
+
+    for (const queryLayer of queryLayers) {
+        try {
+            const response = await addWmsFeatureInfoRequest(queryLayer.layer, queryLayer.serviceUrl, event.containerPoint);
+            if (!response.ok) continue;
+            const featureCollection = await response.json();
+            const properties = featureCollection.features?.[0]?.properties;
+            if (properties) {
+                showWmsFeatureInfo(properties, event.latlng, queryLayer.name);
+                return;
+            }
+        } catch (error) {
+            console.warn(`Unable to query ${queryLayer.name} WMS feature info.`, error);
+        }
+    }
+});
 
 
 function renderDetailValue(value) {
