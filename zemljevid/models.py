@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
 
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _, gettext_noop
+from django.utils.translation import gettext_lazy as _, gettext_noop, get_language
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from colorfield.fields import ColorField
 
@@ -29,26 +29,116 @@ class MemorialStatus(models.IntegerChoices):
     DEPOSITED = 6, _('Deposited memorials')
 
 
-class MemorialType(models.TextChoices):
-    MONUMENT = 'spomenik', _('Monument')
-    STATUE = 'kip', _('Statue')
-    PLAQUE = 'plošča', _('Memorial plaque')
-    #OBELISK = 'obelisk', _('Obelisk')
-    STONE = 'spominski kamen', _('Memorial stone')
-    STOLPERSTEIN = 'spotikavec', _('Stolperstein')
-    BUST = 'doprsni kip', _('Bust')
-    TOMBSTONE = 'nagrobnik', _('Tombstone')
-    GRAVE = 'grob', _('Grave')
-    SCULPTURE = 'skulptura', _('Sculpture')
-    MUSEUM = 'muzej', _('Museum')
-    #AIRPLANE = 'avion', _('Airplane')
-    #ANCHOR = 'sidro', _('Anchor')
-    INFOTABLE = 'infotabla', _('Info table')
-    MEMORIAL_ROOM = 'spominska soba', _('Memorial room')
-    #DIRECTION_SIGN = 'smerokaz', _('Direction sign')
-    OTHER = 'durgo', _('Other')
-    CHAPEL = 'kapelica', _('Chapel')
-    SIGN = 'zmamenje', _('Sign')
+class MemorialTypeDefinition(models.Model):
+    code = django_models.CharField(
+        max_length=255,
+        unique=True,
+        verbose_name=_('Code'),
+        help_text=_('Stable storage/API code. Keep existing values for backward compatibility.'),
+    )
+    is_active = django_models.BooleanField(
+        default=True,
+        verbose_name=_('Active'),
+        help_text=_('If disabled, the type is hidden from new selections but existing records keep their value.'),
+    )
+    sort_order = django_models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        verbose_name=_('Sort order'),
+    )
+
+    class Meta:
+        verbose_name = _('Memorial type')
+        verbose_name_plural = _('Memorial types')
+        ordering = ('sort_order', 'id')
+
+    @staticmethod
+    def default_lang_code():
+        return (settings.LANGUAGE_CODE or 'en').split('-')[0].lower()
+
+    def get_label(self, lang_code=None):
+        lang = (lang_code or get_language() or '').split('-')[0].lower()
+        labels = {t.lang: t.label for t in self.translations.all()}
+        if lang and labels.get(lang):
+            return labels[lang]
+
+        default_lang = self.default_lang_code()
+        if labels.get(default_lang):
+            return labels[default_lang]
+
+        if labels:
+            return next(iter(labels.values()))
+        return self.code
+
+    def __str__(self):
+        return self.get_label()
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            existing_code = type(self).objects.filter(pk=self.pk).values_list('code', flat=True).first()
+            if existing_code is not None and existing_code != self.code:
+                raise ValidationError({
+                    'code': _('Code is immutable after creation. Use a data migration to rename existing codes safely.')
+                })
+        super().save(*args, **kwargs)
+
+
+class MemorialTypeDefinitionTranslation(models.Model):
+    memorial_type = django_models.ForeignKey(
+        MemorialTypeDefinition,
+        on_delete=django_models.CASCADE,
+        related_name='translations',
+        verbose_name=_('Memorial type'),
+    )
+    lang = django_models.CharField(
+        max_length=10,
+        choices=settings.LANGUAGES,
+        default='sl',
+        verbose_name=_('Language'),
+    )
+    label = django_models.CharField(
+        max_length=255,
+        verbose_name=_('Label'),
+        help_text=_('Translated label shown in forms and filters.'),
+    )
+
+    class Meta:
+        unique_together = ('memorial_type', 'lang')
+        verbose_name = _('Memorial type translation')
+        verbose_name_plural = _('Memorial type translations')
+        ordering = ('memorial_type', 'lang')
+
+    def __str__(self):
+        return f"{self.memorial_type.code} [{self.lang}]"
+
+
+def get_memorial_type_label(code, lang_code=None):
+    if not code:
+        return code
+
+    memorial_type = (
+        MemorialTypeDefinition.objects.filter(code=code)
+        .prefetch_related('translations')
+        .first()
+    )
+    if not memorial_type:
+        return code
+    return memorial_type.get_label(lang_code=lang_code)
+
+
+def get_memorial_type_choices(current_value=None, include_inactive=False):
+    queryset = MemorialTypeDefinition.objects.all().prefetch_related('translations')
+    if not include_inactive:
+        queryset = queryset.filter(is_active=True)
+    queryset = queryset.order_by('sort_order', 'id')
+
+    choices = [(item.code, item.get_label()) for item in queryset]
+    existing_codes = {code for code, _ in choices}
+
+    if current_value and current_value not in existing_codes:
+        choices.append((current_value, get_memorial_type_label(current_value)))
+
+    return choices
 
     
 
@@ -165,12 +255,32 @@ class AbstractPartisanMemorial(Memorial):
 
     memorial_type = models.CharField(
         max_length=255,
-        choices=MemorialType.choices,
-        default=MemorialType.MONUMENT,
+        default='spomenik',
         verbose_name=_('Type of memorial'),
         help_text=_('Select the type of memorial'),
         blank=True, null=True
     )
+
+    def clean(self):
+        super().clean()
+
+        selected_code = (self.memorial_type or '').strip()
+        if not selected_code:
+            return
+
+        self.memorial_type = selected_code
+
+        if MemorialTypeDefinition.objects.filter(code=selected_code, is_active=True).exists():
+            return
+
+        if self.pk:
+            previous_code = type(self).objects.filter(pk=self.pk).values_list('memorial_type', flat=True).first()
+            if previous_code == selected_code:
+                return
+
+        raise ValidationError({
+            'memorial_type': _('Selected memorial type is not active. Configure memorial types in admin.')
+        })
 
     obcina = django_models.CharField(
         max_length=255, blank=True, null=True, verbose_name=_('Municipality'),

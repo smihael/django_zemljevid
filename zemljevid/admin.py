@@ -122,6 +122,34 @@ class MemorialBulkImageUploadAdminForm(forms.ModelForm):
     class Meta:
         fields = '__all__'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        memorial_type_field = self.fields.get('memorial_type')
+        if not memorial_type_field:
+            return
+
+        selected_value = None
+        if self.is_bound:
+            selected_value = self.data.get(self.add_prefix('memorial_type'))
+        if not selected_value and getattr(self.instance, 'pk', None):
+            selected_value = getattr(self.instance, 'memorial_type', None)
+        if not selected_value:
+            selected_value = self.initial.get('memorial_type')
+
+        dynamic_choices = get_memorial_type_choices(current_value=selected_value)
+        choices = dynamic_choices if memorial_type_field.required else [('', '---------')] + dynamic_choices
+
+        self.fields['memorial_type'] = forms.ChoiceField(
+            required=memorial_type_field.required,
+            label=memorial_type_field.label,
+            help_text=memorial_type_field.help_text,
+            choices=choices,
+        )
+
+        if selected_value:
+            self.initial['memorial_type'] = selected_value
+
     def clean(self):
         cleaned_data = super().clean()
         files = self.files.getlist('bulk_images')
@@ -347,6 +375,34 @@ class PartisanNamingAdmin(CommonGeoAdmin):
     exclude = ('memorial_text',)
 
 
+class MemorialTypeDefinitionTranslationInline(admin.TabularInline):
+    model = MemorialTypeDefinitionTranslation
+    extra = 1
+    fields = ('lang', 'label')
+
+
+@admin.register(MemorialTypeDefinition)
+class MemorialTypeDefinitionAdmin(admin.ModelAdmin):
+    list_display = ('code', 'display_label', 'is_active', 'sort_order')
+    list_editable = ('is_active', 'sort_order')
+    ordering = ('sort_order', 'id')
+    search_fields = ('code', 'translations__label')
+    inlines = (MemorialTypeDefinitionTranslationInline,)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ('code',)
+        return ()
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('translations')
+
+    def display_label(self, obj):
+        return obj.get_label()
+
+    display_label.short_description = _('Label')
+
+
 for model in [
     PartisanHospital,
     PartisanPointsWithoutMemorial,
@@ -412,7 +468,6 @@ class OkupacijskeMejeAdmin(LeafletGeoAdmin):
 
 for model in [
     #MemorialStatus, 
-    #MemorialType, 
     ImageLicense,
     ExternalProject, 
     PartisanMemorialCategory,
