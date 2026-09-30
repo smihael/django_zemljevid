@@ -300,6 +300,35 @@ function renderDetailValue(value) {
     return value.replace(/\r\n|\r|\n/g, '<br>');
 }
 
+function getFeatureDisplayName(properties, fallback = 'Izbrana točka') {
+    if (!properties || typeof properties !== 'object') return fallback;
+
+    const candidateKeys = [
+        'name', 'Name', 'Ime', 'Naziv', 'name of the trail', 'Name of the trail',
+        'Ime poti', 'Ime obhodnice', 'Ime poti', 'Path name', 'Trail name',
+        'Name of the path', 'Obhodnica'
+    ];
+
+    for (const key of candidateKeys) {
+        const value = properties[key];
+        if (value !== null && value !== undefined && String(value).trim() !== '') {
+            return String(value);
+        }
+    }
+
+    const fallbackKey = Object.keys(properties).find((key) => {
+        const normalized = String(key).toLowerCase();
+        return normalized === 'name' || normalized === 'ime' || normalized.endsWith('name') || normalized.endsWith('ime') || normalized.includes('trail') || normalized.includes('path');
+    });
+
+    if (fallbackKey && properties[fallbackKey] !== null && properties[fallbackKey] !== undefined) {
+        const value = properties[fallbackKey];
+        if (String(value).trim() !== '') return String(value);
+    }
+
+    return fallback;
+}
+
 function displayDetails(layerName, id, marker = null) {
     // Fetch the details of the selected marker, parse the response, and update the sidebar
     fetch(`/api/full/${layerName}/${id}`)
@@ -313,8 +342,7 @@ function displayDetails(layerName, id, marker = null) {
             url.searchParams.set('id', id);
             window.history.replaceState({}, '', url.toString());
 
-            // get property name (key starts with Ime)
-            var name = properties['Ime'] || properties['Name'] || marker?.feature?.properties?.name || 'Izbrana točka';
+            var name = getFeatureDisplayName(properties, marker?.feature?.properties?.name || 'Izbrana točka');
 
             // Update the sidebar title with the layer name
             const sidebarTitle = document.getElementById('sidebar-title');
@@ -572,19 +600,23 @@ async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
     }
     console.log(`GeoJSON loaded for layer: ${layer_model_info.model_name}`);
 
-    // Special handling for okupacijske meje (assumed line / multilinestring features)
-    if (layer_model_info.model_name === 'okupacijskemeje') {
-        console.log('Rendering okupacijske meje');
+    // Special handling for line-based layers such as trails and occupation borders.
+    if (['okupacijskemeje', 'partisantrail'].includes(layer_model_info.model_name)) {
+        const isTrail = layer_model_info.model_name === 'partisantrail';
+        console.log(`Rendering line layer: ${layer_model_info.model_name}`);
+
         const lineLayer = L.geoJSON(geojson, {
             style: function(feature) {
-                const c = feature.properties && feature.properties.color ? feature.properties.color : '#ff0000';
-                return { color: c, weight: 3, opacity: 0.9 };
+                const c = feature.properties && feature.properties.color ? feature.properties.color : (isTrail ? '#2b7a78' : '#ff0000');
+                return { color: c, weight: isTrail ? 4 : 3, opacity: 0.9 };
             },
             onEachFeature: function(feature, layer) {
                 layer._layerName = layer_model_info.model_name;
+                const featureName = getFeatureDisplayName(feature.properties, isTrail ? 'Izbrana obhodnica' : 'Izbrana meja');
+
                 layer.on('click', function() {
                     if (!layer.getPopup()) {
-                        layer.bindPopup(feature.properties.name || 'Izbrana meja');
+                        layer.bindPopup(featureName);
                     }
                     layer.openPopup();
                     displayDetails(layer._layerName, feature.id);
@@ -637,8 +669,9 @@ async function loadMarkersForLayer(layer_model_info, markerClusterGroup) {
         onEachFeature: function(feature, layer) {
             layer.on('click', function(e) {
                 const marker = e.target;
+                const popupTitle = getFeatureDisplayName(feature.properties, 'Izbrana točka');
                 if (!marker.getPopup()) {
-                    marker.bindPopup(feature.properties.name || 'Izbrana točka');
+                    marker.bindPopup(popupTitle);
                 }
                 marker.openPopup();
                 displayDetails(marker._layerName, feature.id);
@@ -660,7 +693,8 @@ async function processGeoLayers() {
 
     const loadPromises = layers.map(async layer => {
         let createdLayer;
-        let isLineLayer = (layer.model_name === 'okupacijske_meje');
+        const lineLayerModels = new Set(['okupacijskemeje', 'partisantrail']);
+        const isLineLayer = lineLayerModels.has(layer.model_name);
 
         if (isLineLayer) {
             // Directly load and add line layer (not clustered)
