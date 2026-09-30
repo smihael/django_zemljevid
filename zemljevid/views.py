@@ -44,6 +44,7 @@ from .models import (
     PartisanHospital,
     PartisanNaming,
     PartisanPointsWithoutMemorial,
+    PartisanTrail,
     OtherMemorials,
     ConnectedExternalEntry,
     MemorialImage,
@@ -192,6 +193,7 @@ DETAIL_MODELS = (
     PartisanHospital,
     PartisanNaming,
     PartisanPointsWithoutMemorial,
+    PartisanTrail,
     OtherMemorials,
 )
 
@@ -201,6 +203,7 @@ TRANSLATABLE_MODEL_SLUGS = (
     'partisanhospital',
     'partisannaming',
     'partisanpointswithoutmemorial',
+    'partisantrail',
     'othermemorials',
 )
 
@@ -293,6 +296,14 @@ class MemorialPublicDetailView(View):
     def _value_for_display(self, value):
         return self._normalize_value(value, mode='display')
 
+    @staticmethod
+    def _geometry_point(geometry):
+        if geometry is None:
+            return None
+        if hasattr(geometry, 'y') and hasattr(geometry, 'x'):
+            return geometry
+        return geometry.centroid
+
     def _build_external_url(self, pattern, ext_id):
         if not pattern:
             return None
@@ -351,6 +362,8 @@ class MemorialPublicDetailView(View):
                 'is_html': self._looks_like_html(value),
             })
 
+        map_point = self._geometry_point(obj.geom)
+        geometry_json = json.loads(obj.geom.geojson) if obj.geom else None
         nearby = []
         if obj.geom:
             for nearby_model in DETAIL_MODELS:
@@ -376,8 +389,8 @@ class MemorialPublicDetailView(View):
                         'id': item.pk,
                         'name': item.name or f"#{item.pk}",
                         'distance_km': round((distance_m.m if distance_m else 0) / 1000, 2),
-                        'lat': item.geom.y if item.geom else None,
-                        'lng': item.geom.x if item.geom else None,
+                        'lat': self._geometry_point(item.geom).y if item.geom else None,
+                        'lng': self._geometry_point(item.geom).x if item.geom else None,
                     })
 
             nearby = sorted(nearby, key=lambda x: x['distance_km'])[: self.NEARBY_LIMIT_TOTAL]
@@ -425,17 +438,18 @@ class MemorialPublicDetailView(View):
             'object_id': obj.pk,
             'object_name': obj.name or f"#{obj.pk}",
             'display_fields': display_fields,
-            'lat': obj.geom.y if obj.geom else None,
-            'lng': obj.geom.x if obj.geom else None,
+            'lat': map_point.y if map_point else None,
+            'lng': map_point.x if map_point else None,
             'nearby': nearby,
             'images': images,
             'connected_entries': connected_entries,
             'nearby_radius_km': self.NEARBY_RADIUS_KM,
             'mini_map_data_json': {
-                'lat': obj.geom.y if obj.geom else None,
-                'lng': obj.geom.x if obj.geom else None,
+                'lat': map_point.y if map_point else None,
+                'lng': map_point.x if map_point else None,
                 'name': obj.name or f"#{obj.pk}",
                 'radius_m': self.NEARBY_RADIUS_KM * 1000,
+                'geometry': geometry_json,
             },
             'nearby_points_json': [
                 {

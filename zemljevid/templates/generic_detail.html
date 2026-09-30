@@ -193,13 +193,20 @@
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
 
-            L.circle(center, {
-                radius: miniMapData.radius_m,
-                color: '#f05a28',
-                fillOpacity: 0.1
-            }).addTo(map);
+            if (miniMapData.geometry?.type === 'MultiLineString') {
+                const trail = L.geoJSON(miniMapData.geometry, {
+                    style: { color: '#f05a28', weight: 5 }
+                }).addTo(map);
+                map.fitBounds(trail.getBounds(), { padding: [20, 20] });
+            } else {
+                L.circle(center, {
+                    radius: miniMapData.radius_m,
+                    color: '#f05a28',
+                    fillOpacity: 0.1
+                }).addTo(map);
 
-            L.marker(center).addTo(map).bindPopup(miniMapData.name || 'Izbrana točka');
+                L.marker(center).addTo(map).bindPopup(miniMapData.name || 'Izbrana točka');
+            }
 
             nearbyPoints.forEach(item => {
                 if (Number.isFinite(item?.lat) && Number.isFinite(item?.lng)) {

@@ -31,6 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.i18n import set_language
 from django.views.static import serve as static_serve
 from django.contrib.auth import views as auth_views
+from zemljevid.views import MemorialPublicDetailView
 
 
 urlpatterns = [
@@ -67,6 +68,13 @@ urlpatterns = [
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += [
+    path(
+        'sl/podrobno/<str:model_slug>/<int:object_id>/',
+        MemorialPublicDetailView.as_view(),
+        name='sl_memorial_detail_compat',
+    ),
+]
 urlpatterns += i18n_patterns(
     path(_(''), include('zemljevid.urls')),
 )

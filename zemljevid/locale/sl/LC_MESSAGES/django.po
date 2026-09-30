@@ -778,23 +778,26 @@ msgstr ""
 #~ msgid "Sign"
 #~ msgstr "Znamenje"
 
-#~ msgid "partisanmemorial"
-#~ msgstr "partizanskispomenik"
+msgid "partisanmemorial"
+msgstr "partizanskispomenik"
 
-#~ msgid "croatianpartisanmemorial"
-#~ msgstr "hrvaskipartizanskispomenik"
+msgid "croatianpartisanmemorial"
+msgstr "hrvaskipartizanskispomenik"
 
-#~ msgid "partisanhospital"
-#~ msgstr "partizanskabolnisnica"
+msgid "partisanhospital"
+msgstr "partizanskabolnisnica"
 
-#~ msgid "partisannaming"
-#~ msgstr "partizanskopoimenovanje"
+msgid "partisannaming"
+msgstr "partizanskopoimenovanje"
 
-#~ msgid "partisanpointswithoutmemorial"
-#~ msgstr "partizansketockebrezobelezja"
+msgid "partisanpointswithoutmemorial"
+msgstr "partizansketockebrezobelezja"
 
-#~ msgid "othermemorials"
-#~ msgstr "ostalaobelezja"
+msgid "partisantrail"
+msgstr "partizanskaobhodnica"
+
+msgid "othermemorials"
+msgstr "ostalaobelezja"
 
 #~ msgid "External project ID."
 #~ msgstr "ID v zunanji zbirki"
